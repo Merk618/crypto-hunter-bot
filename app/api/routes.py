@@ -11,6 +11,7 @@ from app.execution.paper_broker import PaperBroker
 from app.execution.trade_executor import TradeExecutor
 from app.exchanges.kraken_adapter import EmptyMarketDataError, InvalidSymbolError, KrakenRequestError, UnsupportedTimeframeError
 from app.risk.risk_manager import RiskManager
+from app.reporting.dashboard_service import DashboardService
 from app.storage.database import init_db
 from app.storage.trade_journal import TradeJournal
 from app.strategies.crypto_hunter_strategy import CryptoHunterStrategy
@@ -25,6 +26,7 @@ _trade_executor = TradeExecutor(paper_broker=_paper_broker)
 _risk_manager = RiskManager()
 _paper_bot = PaperTradingBot(risk_manager=_risk_manager, trade_executor=_trade_executor)
 _journal = TradeJournal()
+_dashboard_service = DashboardService(bot_state=_paper_bot.state, paper_broker=_paper_broker, risk_manager=_risk_manager, trade_journal=_journal)
 
 
 class PaperOrderRequest(BaseModel):
@@ -398,3 +400,50 @@ def backtest_watchlist(request: BacktestWatchlistRequest) -> dict:
         return {"results": {symbol: result.to_dict() for symbol, result in results.items()}}
     except BacktestDataError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.get("/reports/overview")
+def report_overview() -> dict:
+    """Return read-only dashboard overview."""
+    return _dashboard_service.get_overview().to_dict()
+
+
+@router.get("/reports/paper-performance")
+def report_paper_performance() -> dict:
+    """Return read-only paper performance."""
+    return _dashboard_service.get_paper_performance().to_dict()
+
+
+@router.get("/reports/signal-performance")
+def report_signal_performance(limit: int = Query(default=100, ge=1, le=500), symbol: str | None = None) -> dict:
+    """Return read-only signal performance."""
+    report = _dashboard_service.get_signal_performance(limit=limit).to_dict()
+    if symbol:
+        normalized = symbol.upper().replace("-", "/")
+        report["recent_signals"] = [signal for signal in report["recent_signals"] if signal.get("symbol") == normalized]
+        report["symbols_ranked_by_latest_score"] = [row for row in report["symbols_ranked_by_latest_score"] if row.get("symbol") == normalized]
+    return report
+
+
+@router.get("/reports/risk-summary")
+def report_risk_summary() -> dict:
+    """Return read-only risk summary."""
+    return _dashboard_service.get_risk_summary().to_dict()
+
+
+@router.get("/reports/recent-activity")
+def report_recent_activity(limit: int = Query(default=50, ge=1, le=500)) -> dict:
+    """Return read-only recent activity."""
+    return _dashboard_service.get_recent_activity(limit=limit).to_dict()
+
+
+@router.get("/reports/equity-curve")
+def report_equity_curve(limit: int = Query(default=500, ge=1, le=5000)) -> dict:
+    """Return read-only equity curve."""
+    return _dashboard_service.get_equity_curve(limit=limit).to_dict()
+
+
+@router.get("/reports/full-dashboard")
+def report_full_dashboard() -> dict:
+    """Return full read-only dashboard snapshot."""
+    return _dashboard_service.get_full_dashboard_snapshot()

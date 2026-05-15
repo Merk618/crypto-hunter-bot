@@ -4,7 +4,7 @@ Crypto Hunter is a backend trading engine for a sophisticated crypto trading bot
 
 ## Current Phase
 
-Phase 9 backtesting engine:
+Phase 10 reporting and dashboard API:
 
 - Clean Python backend project
 - FastAPI health and status endpoints
@@ -22,6 +22,7 @@ Phase 9 backtesting engine:
 - Manual paper auto-trading scans that combine market data, signals, risk checks, and paper buys
 - SQLite trade journal for bot events, signals, risk decisions, paper orders/fills/positions, account snapshots, scan results, and errors
 - Offline backtesting engine with trades, equity curve, drawdown, win rate, fees, slippage, and performance metrics
+- Read-only reporting API for dashboard overview, paper performance, signal quality, risk status, recent activity, and equity curves
 
 Live trading and real exchange order execution are not implemented yet.
 
@@ -193,6 +194,22 @@ Assumptions:
 
 Backtests are research tools. They do not guarantee future performance.
 
+## Reporting API
+
+Phase 10 adds clean JSON reporting endpoints for a future YucaTanaTrades frontend. These endpoints are read-only: they do not start the bot, scan markets, place paper orders, or touch live exchange APIs.
+
+Reports summarize:
+
+- bot state
+- paper account performance
+- signal category quality
+- risk and kill-switch status
+- recent journal activity
+- account-snapshot equity curve
+- full dashboard snapshot
+
+The reporting layer is designed as an API boundary that YucaTanaTrades can later consume without coupling directly to bot internals.
+
 ## Safety Defaults
 
 The default configuration is intentionally conservative:
@@ -247,6 +264,13 @@ Then open:
 - `http://127.0.0.1:8000/journal/errors`
 - `http://127.0.0.1:8000/backtest/single`
 - `http://127.0.0.1:8000/backtest/watchlist`
+- `http://127.0.0.1:8000/reports/overview`
+- `http://127.0.0.1:8000/reports/paper-performance`
+- `http://127.0.0.1:8000/reports/signal-performance`
+- `http://127.0.0.1:8000/reports/risk-summary`
+- `http://127.0.0.1:8000/reports/recent-activity`
+- `http://127.0.0.1:8000/reports/equity-curve`
+- `http://127.0.0.1:8000/reports/full-dashboard`
 
 Use `BTC-USD` in path parameters because raw `BTC/USD` contains a slash and is not path-safe. The API converts `BTC-USD` to `BTC/USD` internally.
 
@@ -297,6 +321,14 @@ Backtest with JSON candles:
 Invoke-RestMethod -Method Post -Uri "http://127.0.0.1:8000/backtest/single" -ContentType "application/json" -Body '{"symbol":"BTC/USD","timeframe":"1h","candles":[{"timestamp":"2026-01-01T00:00:00Z","open":65000,"high":66000,"low":64000,"close":65500,"volume":100}]}'
 ```
 
+Reporting examples:
+
+```powershell
+Invoke-RestMethod -Uri "http://127.0.0.1:8000/reports/overview"
+Invoke-RestMethod -Uri "http://127.0.0.1:8000/reports/full-dashboard"
+Invoke-RestMethod -Uri "http://127.0.0.1:8000/reports/equity-curve?limit=500"
+```
+
 ## Run Tests
 
 ```powershell
@@ -305,4 +337,4 @@ pytest
 
 ## Live Trading Warning
 
-Live trading is locked down and not implemented in Phase 9. Private exchange APIs, real order placement, live sell execution, and Coinbase integration are not implemented in this phase. The bot loop is paper-only, and paper/backtest results do not guarantee live performance.
+Live trading is locked down and not implemented in Phase 10. Private exchange APIs, real order placement, live sell execution, and Coinbase integration are not implemented in this phase. Reporting is read-only, and paper/backtest results do not guarantee live performance.
