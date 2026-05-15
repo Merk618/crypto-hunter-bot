@@ -8,6 +8,11 @@ from app.bot.paper_trading_bot import PaperTradingBot, PaperTradingBotError
 from app.backtesting.backtest_engine import BacktestDataError, BacktestEngine
 from app.config import get_settings
 from app.data.market_data_service import MarketDataService
+from app.execution.dry_run_executor import DryRunExecutor
+from app.execution.emergency_controls import EmergencyControls
+from app.execution.execution_guard import ExecutionGuard
+from app.execution.order_intent import OrderIntent
+from app.execution.order_validator import OrderValidator
 from app.execution.paper_broker import PaperBroker
 from app.execution.trade_executor import TradeExecutor
 from app.exchanges.kraken_adapter import EmptyMarketDataError, InvalidSymbolError, KrakenRequestError, UnsupportedTimeframeError
@@ -29,6 +34,10 @@ _paper_bot = PaperTradingBot(risk_manager=_risk_manager, trade_executor=_trade_e
 _journal = TradeJournal()
 _dashboard_service = DashboardService(bot_state=_paper_bot.state, paper_broker=_paper_broker, risk_manager=_risk_manager, trade_journal=_journal)
 _account_service = AccountService(journal=_journal)
+_order_validator = OrderValidator()
+_dry_run_executor = DryRunExecutor(journal=_journal)
+_execution_guard = ExecutionGuard()
+_emergency_controls = EmergencyControls(bot_state=_paper_bot.state, paper_broker=_paper_broker)
 
 
 class PaperOrderRequest(BaseModel):
@@ -87,6 +96,31 @@ class BacktestWatchlistRequest(BaseModel):
 
     timeframe: str = "1h"
     symbol_to_candles: dict[str, list[dict]]
+
+
+class ExecutionOrderRequest(BaseModel):
+    """Request body for order-intent validation and dry-run previews."""
+
+    symbol: str
+    side: str
+    order_type: str = "market"
+    quantity: float
+    estimated_price: float
+    reason: str | None = None
+    signal_score: int = 0
+    signal_category: str = ""
+    risk_approved: bool = False
+    risk_decision_id: str | None = None
+    risk_decision: dict | None = None
+    account_summary: dict | None = None
+    ticker: dict | None = None
+    asset_pair_constraints: dict | None = None
+
+
+class EmergencyRequest(BaseModel):
+    """Request body for execution emergency controls."""
+
+    reason: str = "manual emergency control"
 
 
 @router.get("/health")
@@ -476,3 +510,77 @@ def account_balances() -> dict:
 def account_summary() -> dict:
     """Return read-only Kraken account summary."""
     return _account_service.get_account_summary().to_dict()
+
+
+def _build_order_intent(request: ExecutionOrderRequest) -> OrderIntent:
+    """Build an order intent from an API request."""
+    return OrderIntent(
+        symbol=request.symbol,
+        side=request.side,
+        order_type=request.order_type,
+        quantity=request.quantity,
+        estimated_price=request.estimated_price,
+        reason=request.reason or "Phase 12 validation test",
+        signal_score=request.signal_score,
+        signal_category=request.signal_category,
+        risk_approved=request.risk_approved,
+        risk_decision_id=request.risk_decision_id,
+    )
+
+
+@router.get("/execution/safety-status")
+def execution_safety_status() -> dict:
+    """Return execution safety gate status."""
+    return _execution_guard.get_execution_safety_status()
+
+
+@router.post("/execution/validate-order")
+def execution_validate_order(request: ExecutionOrderRequest) -> dict:
+    """Validate an order intent without placing an order."""
+    intent = _build_order_intent(request)
+    result = _order_validator.validate_order_intent(
+        intent,
+        request.risk_decision,
+        account_summary=request.account_summary,
+        ticker=request.ticker,
+        asset_pair_constraints=request.asset_pair_constraints,
+    )
+    return result.to_dict()
+
+
+@router.post("/execution/dry-run-order")
+def execution_dry_run_order(request: ExecutionOrderRequest) -> dict:
+    """Validate and preview a dry-run order without live execution."""
+    intent = _build_order_intent(request)
+    validation = _order_validator.validate_order_intent(
+        intent,
+        request.risk_decision,
+        account_summary=request.account_summary,
+        ticker=request.ticker,
+        asset_pair_constraints=request.asset_pair_constraints,
+    )
+    return _dry_run_executor.execute_dry_run(intent, validation)
+
+
+@router.get("/execution/dry-runs")
+def execution_dry_runs(limit: int = Query(default=50, ge=1, le=500)) -> dict:
+    """Return recent dry-run order previews."""
+    return {"dry_runs": _dry_run_executor.get_recent_dry_runs(limit=limit)}
+
+
+@router.post("/execution/emergency-pause")
+def execution_emergency_pause(request: EmergencyRequest) -> dict:
+    """Pause the paper bot through emergency controls."""
+    return _emergency_controls.emergency_pause_bot(request.reason)
+
+
+@router.post("/execution/emergency-stop")
+def execution_emergency_stop(request: EmergencyRequest) -> dict:
+    """Stop the paper bot through emergency controls."""
+    return _emergency_controls.emergency_stop_bot(request.reason)
+
+
+@router.post("/execution/emergency-cancel-dry-run")
+def execution_emergency_cancel_dry_run(request: EmergencyRequest) -> dict:
+    """Preview emergency live-order cancel without touching an exchange."""
+    return _emergency_controls.emergency_cancel_live_orders_dry_run(request.reason)
