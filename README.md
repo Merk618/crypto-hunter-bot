@@ -4,7 +4,7 @@ Crypto Hunter is a backend trading engine for a sophisticated crypto trading bot
 
 ## Current Phase
 
-Phase 1 foundation only:
+Phase 2 public market data foundation:
 
 - Clean Python backend project
 - FastAPI health and status endpoints
@@ -12,7 +12,7 @@ Phase 1 foundation only:
 - Paper trading by default
 - Live trading safety locks
 - Exchange adapter interface
-- Kraken adapter skeleton
+- Kraken public REST market data for AssetPairs, Ticker, OHLC, and Depth
 - Coinbase placeholder adapter
 - Basic risk and strategy shells
 
@@ -28,6 +28,7 @@ The default configuration is intentionally conservative:
 - `LiveBroker` refuses orders unless every live safety condition passes
 - Exchange API secrets are never returned by API routes
 - No withdrawal functionality exists in this repository
+- Phase 2 uses Kraken public endpoints only and does not require API keys
 
 ## Setup
 
@@ -49,6 +50,11 @@ Then open:
 
 - `http://127.0.0.1:8000/health`
 - `http://127.0.0.1:8000/status`
+- `http://127.0.0.1:8000/market/symbols`
+- `http://127.0.0.1:8000/market/ticker/BTC-USD`
+- `http://127.0.0.1:8000/market/candles/BTC-USD?timeframe=1h&limit=200`
+
+Use `BTC-USD` in path parameters because raw `BTC/USD` contains a slash and is not path-safe. The API converts `BTC-USD` to `BTC/USD` internally.
 
 ## Run Tests
 
@@ -58,4 +64,4 @@ pytest
 
 ## Live Trading Warning
 
-Live trading is locked down and not implemented in Phase 1. Kraken and Coinbase adapters do not place real live orders in this phase.
+Live trading is locked down and not implemented in Phase 2. Kraken and Coinbase adapters do not place real live orders in this phase.
