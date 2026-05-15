@@ -4,7 +4,7 @@ Crypto Hunter is a backend trading engine for a sophisticated crypto trading bot
 
 ## Current Phase
 
-Phase 12 execution safety and dry-run order validation:
+Phase 13 safety audit and integration hardening:
 
 - Clean Python backend project
 - FastAPI health and status endpoints
@@ -25,6 +25,8 @@ Phase 12 execution safety and dry-run order validation:
 - Read-only reporting API for dashboard overview, paper performance, signal quality, risk status, recent activity, and equity curves
 - Kraken private read-only account status and balance connectivity, disabled by default
 - Order-intent validation, dry-run execution previews, execution safety gates, and emergency controls
+- Centralized dependency wiring for shared runtime services
+- Runtime, dependency, and safety-audit system endpoints
 
 Live trading and real exchange order execution are not implemented yet.
 
@@ -278,6 +280,45 @@ Dry-run execution returns what would have been sent to an exchange, clearly mark
 
 Emergency controls can pause or stop the paper bot and can generate a dry-run live-cancel preview. They do not call live exchange endpoints.
 
+## Safety Audit And Runtime Hardening
+
+Phase 13 adds a safety audit and app-state hardening layer before any future live-trading work. It is read-only and does not trigger scans, place trades, or access private Kraken data unless the existing read-only account settings already allow it.
+
+The dependency container keeps stateful services shared consistently:
+
+- one shared `PaperBroker`
+- one shared `TradeExecutor`
+- one shared `RiskManager`
+- one shared `PaperTradingBot`
+- one shared `TradeJournal`
+- reporting wired to the same paper account state as paper endpoints
+
+The safety audit checks:
+
+- live trading gates remain locked
+- default live-trading config is safe
+- Kraken private trading remains disabled
+- dry-run execution remains enabled
+- `ExecutionGuard` cannot execute live orders
+- `LiveBroker` refuses orders under default config
+- dry-run and validation layers do not depend on a live broker
+- forbidden Kraken live-order strings are absent from executable app code
+- exchange clients expose no withdrawal, transfer, funding, or staking methods
+- secret-like fields are scrubbed before journal serialization
+- account endpoints are private-read disabled by default
+- bot auto-trading remains paper-only
+
+Before any future live-trading phase, this checklist should be true:
+
+- full test suite passes
+- safety audit passes
+- dry-run order validation passes
+- paper trading has been monitored
+- backtests have been reviewed
+- Kraken API key permissions are understood
+- Kraken keys use read/query permissions until a future live phase explicitly changes that
+- no withdrawal permissions are enabled
+
 ## Safety Defaults
 
 The default configuration is intentionally conservative:
@@ -286,7 +327,8 @@ The default configuration is intentionally conservative:
 - `ENABLE_LIVE_TRADING=false`
 - `REQUIRE_LIVE_CONFIRMATION=true`
 - `LiveBroker` refuses orders unless every live safety condition passes
-- `ExecutionGuard` always reports live execution unavailable in Phase 12
+- `ExecutionGuard` always reports live execution unavailable in Phase 13
+- `SafetyAudit` must pass before future execution work
 - Exchange API secrets are never returned by API routes
 - No withdrawal functionality exists in this repository
 - Phase 2/3 use Kraken public endpoints and local indicator calculations only; no API keys are required for indicators
@@ -350,6 +392,9 @@ Then open:
 - `http://127.0.0.1:8000/execution/emergency-pause`
 - `http://127.0.0.1:8000/execution/emergency-stop`
 - `http://127.0.0.1:8000/execution/emergency-cancel-dry-run`
+- `http://127.0.0.1:8000/system/runtime`
+- `http://127.0.0.1:8000/system/dependencies`
+- `http://127.0.0.1:8000/system/safety-audit`
 
 Use `BTC-USD` in path parameters because raw `BTC/USD` contains a slash and is not path-safe. The API converts `BTC-USD` to `BTC/USD` internally.
 
@@ -428,12 +473,20 @@ Invoke-RestMethod -Method Post -Uri "http://127.0.0.1:8000/execution/dry-run-ord
 Invoke-RestMethod -Method Post -Uri "http://127.0.0.1:8000/execution/emergency-stop" -ContentType "application/json" -Body '{"reason":"manual emergency stop"}'
 ```
 
+System hardening examples:
+
+```powershell
+Invoke-RestMethod -Uri "http://127.0.0.1:8000/system/runtime"
+Invoke-RestMethod -Uri "http://127.0.0.1:8000/system/dependencies"
+Invoke-RestMethod -Uri "http://127.0.0.1:8000/system/safety-audit"
+```
+
 ## Run Tests
 
 ```powershell
-pytest
+.\.venv\Scripts\python.exe -m pytest
 ```
 
 ## Live Trading Warning
 
-Live trading is locked down and not implemented in Phase 12. Kraken private access is read-only account data only. Real order placement, live sell execution, live cancel execution, withdrawals, transfers, and Coinbase integration are not implemented in this phase. Reporting is read-only, dry-run execution is only a preview, and paper/backtest results do not guarantee live performance.
+Live trading is locked down and not implemented in Phase 13. Kraken private access is read-only account data only. Real order placement, live sell execution, live cancel execution, withdrawals, transfers, and Coinbase integration are not implemented in this phase. Reporting and system endpoints are read-only, dry-run execution is only a preview, and paper/backtest results do not guarantee live performance.
