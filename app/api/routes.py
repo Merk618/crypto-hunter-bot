@@ -3,6 +3,7 @@
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
 
+from app.account.account_service import AccountService
 from app.bot.paper_trading_bot import PaperTradingBot, PaperTradingBotError
 from app.backtesting.backtest_engine import BacktestDataError, BacktestEngine
 from app.config import get_settings
@@ -27,6 +28,7 @@ _risk_manager = RiskManager()
 _paper_bot = PaperTradingBot(risk_manager=_risk_manager, trade_executor=_trade_executor)
 _journal = TradeJournal()
 _dashboard_service = DashboardService(bot_state=_paper_bot.state, paper_broker=_paper_broker, risk_manager=_risk_manager, trade_journal=_journal)
+_account_service = AccountService(journal=_journal)
 
 
 class PaperOrderRequest(BaseModel):
@@ -447,3 +449,30 @@ def report_equity_curve(limit: int = Query(default=500, ge=1, le=5000)) -> dict:
 def report_full_dashboard() -> dict:
     """Return full read-only dashboard snapshot."""
     return _dashboard_service.get_full_dashboard_snapshot()
+
+
+@router.get("/account/status")
+def account_status() -> dict:
+    """Return read-only Kraken private account connectivity status."""
+    return _account_service.get_status()
+
+
+@router.get("/account/balances")
+def account_balances() -> dict:
+    """Return read-only Kraken balances or safe disabled response."""
+    summary = _account_service.get_account_summary()
+    return {
+        "exchange": summary.exchange,
+        "private_read_enabled": summary.private_read_enabled,
+        "configured": summary.configured,
+        "balances": [balance.to_dict() for balance in summary.balances],
+        "warnings": summary.warnings,
+        "source": summary.source,
+        "updated_at": summary.updated_at.isoformat(),
+    }
+
+
+@router.get("/account/summary")
+def account_summary() -> dict:
+    """Return read-only Kraken account summary."""
+    return _account_service.get_account_summary().to_dict()

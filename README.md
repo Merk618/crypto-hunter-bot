@@ -4,7 +4,7 @@ Crypto Hunter is a backend trading engine for a sophisticated crypto trading bot
 
 ## Current Phase
 
-Phase 10 reporting and dashboard API:
+Phase 11 Kraken private read-only account connectivity:
 
 - Clean Python backend project
 - FastAPI health and status endpoints
@@ -23,6 +23,7 @@ Phase 10 reporting and dashboard API:
 - SQLite trade journal for bot events, signals, risk decisions, paper orders/fills/positions, account snapshots, scan results, and errors
 - Offline backtesting engine with trades, equity curve, drawdown, win rate, fees, slippage, and performance metrics
 - Read-only reporting API for dashboard overview, paper performance, signal quality, risk status, recent activity, and equity curves
+- Kraken private read-only account status and balance connectivity, disabled by default
 
 Live trading and real exchange order execution are not implemented yet.
 
@@ -210,6 +211,36 @@ Reports summarize:
 
 The reporting layer is designed as an API boundary that YucaTanaTrades can later consume without coupling directly to bot internals.
 
+## Kraken Read-Only Account Connection
+
+Phase 11 adds optional Kraken private read-only account connectivity. It can read balances and account status when explicitly enabled, but it cannot place orders, cancel orders, transfer funds, stake, fund, or withdraw.
+
+Defaults:
+
+- `KRAKEN_PRIVATE_READ_ENABLED=false`
+- `KRAKEN_PRIVATE_TRADING_ENABLED=false`
+- `KRAKEN_REQUIRE_READ_ONLY=true`
+- `KRAKEN_ACCOUNT_CACHE_SECONDS=30`
+
+Safe Kraken API key guidance:
+
+- Create a dedicated API key for Crypto Hunter.
+- Enable read/query permissions only.
+- Do not enable trading.
+- Never enable withdrawals.
+- Keep funding, staking, transfer, and withdrawal permissions disabled.
+- Store keys only in `.env`; they are never returned by the API and are not stored in SQLite.
+
+Example `.env` values:
+
+```text
+KRAKEN_API_KEY=your_read_only_key
+KRAKEN_API_SECRET=your_read_only_secret
+KRAKEN_PRIVATE_READ_ENABLED=true
+KRAKEN_PRIVATE_TRADING_ENABLED=false
+KRAKEN_REQUIRE_READ_ONLY=true
+```
+
 ## Safety Defaults
 
 The default configuration is intentionally conservative:
@@ -271,6 +302,9 @@ Then open:
 - `http://127.0.0.1:8000/reports/recent-activity`
 - `http://127.0.0.1:8000/reports/equity-curve`
 - `http://127.0.0.1:8000/reports/full-dashboard`
+- `http://127.0.0.1:8000/account/status`
+- `http://127.0.0.1:8000/account/balances`
+- `http://127.0.0.1:8000/account/summary`
 
 Use `BTC-USD` in path parameters because raw `BTC/USD` contains a slash and is not path-safe. The API converts `BTC-USD` to `BTC/USD` internally.
 
@@ -329,6 +363,14 @@ Invoke-RestMethod -Uri "http://127.0.0.1:8000/reports/full-dashboard"
 Invoke-RestMethod -Uri "http://127.0.0.1:8000/reports/equity-curve?limit=500"
 ```
 
+Account read-only examples:
+
+```powershell
+Invoke-RestMethod -Uri "http://127.0.0.1:8000/account/status"
+Invoke-RestMethod -Uri "http://127.0.0.1:8000/account/summary"
+Invoke-RestMethod -Uri "http://127.0.0.1:8000/account/balances"
+```
+
 ## Run Tests
 
 ```powershell
@@ -337,4 +379,4 @@ pytest
 
 ## Live Trading Warning
 
-Live trading is locked down and not implemented in Phase 10. Private exchange APIs, real order placement, live sell execution, and Coinbase integration are not implemented in this phase. Reporting is read-only, and paper/backtest results do not guarantee live performance.
+Live trading is locked down and not implemented in Phase 11. Kraken private access is read-only account data only. Real order placement, live sell execution, withdrawals, transfers, and Coinbase integration are not implemented in this phase. Reporting is read-only, and paper/backtest results do not guarantee live performance.
