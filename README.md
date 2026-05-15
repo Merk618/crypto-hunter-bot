@@ -4,7 +4,7 @@ Crypto Hunter is a backend trading engine for a sophisticated crypto trading bot
 
 ## Current Phase
 
-Phase 5 safe paper trading foundation:
+Phase 7 paper auto-trading loop:
 
 - Clean Python backend project
 - FastAPI health and status endpoints
@@ -18,6 +18,8 @@ Phase 5 safe paper trading foundation:
 - Indicator engine for candle DataFrames from Phase 2
 - Transparent signal scoring and explanation from indicator-enhanced candles
 - Safe in-memory paper trading with balances, positions, fees, slippage, realized PnL, and unrealized PnL
+- Risk validation, position sizing, cooldown controls, and kill-switch controls
+- Manual paper auto-trading scans that combine market data, signals, risk checks, and paper buys
 
 Live trading and real exchange order execution are not implemented yet.
 
@@ -83,6 +85,69 @@ Sell fills use `market_price * (1 - slippage_bps / 10000)`.
 
 Paper trading is useful for validating mechanics, but it does not guarantee live performance.
 
+## Risk Management
+
+Phase 6 adds a risk decision layer. It does not execute trades. It only approves or rejects proposed trades.
+
+Risk checks include:
+
+- Minimum signal score and `STRONG_BUY` category requirement
+- Signal blockers
+- Buy/sell side validation
+- Market price validation
+- Available cash
+- Maximum open positions
+- Maximum single-position allocation
+- Daily realized loss limit
+- Spread limit
+- Kill switch status
+- Symbol cooldowns
+- Maximum trades per day
+- Consecutive loss limit
+
+## Position Sizing
+
+The risk sizer uses:
+
+```text
+risk_amount = equity * MAX_RISK_PER_TRADE
+risk_per_unit = abs(entry_price - stop_loss_price)
+quantity = risk_amount / risk_per_unit
+```
+
+Then quantity is capped by available cash and maximum allocation.
+
+## Kill Switch
+
+The kill switch can be manually activated or triggered after repeated API failures:
+
+- `MAX_API_FAILURES_BEFORE_KILL=5`
+- active kill switch rejects all risk evaluations
+
+## Cooldowns
+
+Cooldowns are symbol-specific and timestamp-based:
+
+- `COOLDOWN_AFTER_TRADE_MINUTES=15`
+- `COOLDOWN_AFTER_LOSS_MINUTES=60`
+
+Cooldowns only block risk approval. They do not execute or close positions.
+
+## Paper Auto-Trading
+
+Phase 7 adds a manual paper auto-trading loop. It scans configured symbols, generates signals, evaluates risk, and places paper buy orders only when every condition passes.
+
+Defaults:
+
+- `PAPER_AUTO_TRADING_ENABLED=false`
+- `PAPER_ALLOW_AUTOBUY=true`
+- `PAPER_ALLOW_AUTOSELL=false`
+- `BOT_SCAN_TIMEFRAME=1h`
+- `BOT_SCAN_LIMIT=250`
+- `BOT_MIN_SECONDS_BETWEEN_SCANS=60`
+
+`/bot/start` does not create an infinite blocking loop. Use `/bot/scan-once` to run a manual scan. Auto-selling is disabled by default and no real orders are ever placed.
+
 ## Safety Defaults
 
 The default configuration is intentionally conservative:
@@ -124,6 +189,8 @@ Then open:
 - `http://127.0.0.1:8000/paper/positions`
 - `http://127.0.0.1:8000/paper/orders`
 - `http://127.0.0.1:8000/paper/fills`
+- `http://127.0.0.1:8000/risk/status`
+- `http://127.0.0.1:8000/bot/status`
 
 Use `BTC-USD` in path parameters because raw `BTC/USD` contains a slash and is not path-safe. The API converts `BTC-USD` to `BTC/USD` internally.
 
@@ -139,6 +206,27 @@ Manual paper close example:
 Invoke-RestMethod -Method Post -Uri "http://127.0.0.1:8000/paper/close/BTC-USD" -ContentType "application/json" -Body '{"market_price":66000,"reason":"manual paper close test"}'
 ```
 
+Risk evaluation example:
+
+```powershell
+Invoke-RestMethod -Method Post -Uri "http://127.0.0.1:8000/risk/evaluate" -ContentType "application/json" -Body '{"symbol":"BTC/USD","side":"buy","market_price":65000,"spread_bps":12,"requested_quantity":null,"signal_result":{"score":84,"category":"STRONG_BUY","blockers":[],"suggested_stop_loss":63000,"suggested_entry":65000}}'
+```
+
+Kill switch examples:
+
+```powershell
+Invoke-RestMethod -Method Post -Uri "http://127.0.0.1:8000/risk/kill-switch/activate" -ContentType "application/json" -Body '{"reason":"manual safety pause"}'
+Invoke-RestMethod -Method Post -Uri "http://127.0.0.1:8000/risk/kill-switch/deactivate" -ContentType "application/json" -Body '{"reason":"resume testing"}'
+```
+
+Manual paper bot scan:
+
+```powershell
+Invoke-RestMethod -Method Post -Uri "http://127.0.0.1:8000/bot/start" -ContentType "application/json" -Body '{"manual_start":true}'
+Invoke-RestMethod -Method Post -Uri "http://127.0.0.1:8000/bot/scan-once"
+Invoke-RestMethod -Method Post -Uri "http://127.0.0.1:8000/bot/stop"
+```
+
 ## Run Tests
 
 ```powershell
@@ -147,4 +235,4 @@ pytest
 
 ## Live Trading Warning
 
-Live trading is locked down and not implemented in Phase 5. Private exchange APIs, real order placement, live sell execution, and Coinbase integration are not implemented in this phase.
+Live trading is locked down and not implemented in Phase 7. Private exchange APIs, real order placement, live sell execution, and Coinbase integration are not implemented in this phase. The bot loop is paper-only and paper results do not guarantee live performance.
