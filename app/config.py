@@ -1,8 +1,6 @@
 """Application configuration and safety validation."""
 
 from enum import StrEnum
-from typing import Literal
-
 from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -39,6 +37,9 @@ class Settings(BaseSettings):
     max_risk_per_trade: float = Field(default=0.01, gt=0, le=1, alias="MAX_RISK_PER_TRADE")
     max_daily_loss: float = Field(default=0.03, gt=0, le=1, alias="MAX_DAILY_LOSS")
     max_open_positions: int = Field(default=3, gt=0, alias="MAX_OPEN_POSITIONS")
+    paper_starting_cash: float = Field(default=10000.0, gt=0, alias="PAPER_STARTING_CASH")
+    paper_fee_rate: float = Field(default=0.0025, ge=0, le=1, alias="PAPER_FEE_RATE")
+    paper_slippage_bps: float = Field(default=10.0, ge=0, alias="PAPER_SLIPPAGE_BPS")
     kraken_api_key: str = Field(default="", alias="KRAKEN_API_KEY")
     kraken_api_secret: str = Field(default="", alias="KRAKEN_API_SECRET")
     coinbase_api_key: str = Field(default="", alias="COINBASE_API_KEY")
