@@ -4,7 +4,7 @@ Crypto Hunter is a backend trading engine for a sophisticated crypto trading bot
 
 ## Current Phase
 
-Phase 7 paper auto-trading loop:
+Phase 8 SQLite persistence and trade journal:
 
 - Clean Python backend project
 - FastAPI health and status endpoints
@@ -20,6 +20,7 @@ Phase 7 paper auto-trading loop:
 - Safe in-memory paper trading with balances, positions, fees, slippage, realized PnL, and unrealized PnL
 - Risk validation, position sizing, cooldown controls, and kill-switch controls
 - Manual paper auto-trading scans that combine market data, signals, risk checks, and paper buys
+- SQLite trade journal for bot events, signals, risk decisions, paper orders/fills/positions, account snapshots, scan results, and errors
 
 Live trading and real exchange order execution are not implemented yet.
 
@@ -148,6 +149,29 @@ Defaults:
 
 `/bot/start` does not create an infinite blocking loop. Use `/bot/scan-once` to run a manual scan. Auto-selling is disabled by default and no real orders are ever placed.
 
+## SQLite Trade Journal
+
+Phase 8 adds durable SQLite persistence so paper activity can be reviewed after restart.
+
+Defaults:
+
+- `DATABASE_URL=sqlite:///./crypto_hunter.db`
+- `ENABLE_TRADE_JOURNAL=true`
+
+Stored records:
+
+- bot events
+- signal records
+- risk decisions
+- paper orders
+- paper fills
+- paper position snapshots
+- account snapshots
+- scan results
+- error records
+
+API keys and secret-looking payload fields are scrubbed before JSON payloads are stored.
+
 ## Safety Defaults
 
 The default configuration is intentionally conservative:
@@ -191,6 +215,15 @@ Then open:
 - `http://127.0.0.1:8000/paper/fills`
 - `http://127.0.0.1:8000/risk/status`
 - `http://127.0.0.1:8000/bot/status`
+- `http://127.0.0.1:8000/journal/events`
+- `http://127.0.0.1:8000/journal/signals`
+- `http://127.0.0.1:8000/journal/risk-decisions`
+- `http://127.0.0.1:8000/journal/orders`
+- `http://127.0.0.1:8000/journal/fills`
+- `http://127.0.0.1:8000/journal/positions`
+- `http://127.0.0.1:8000/journal/account-snapshots`
+- `http://127.0.0.1:8000/journal/scans`
+- `http://127.0.0.1:8000/journal/errors`
 
 Use `BTC-USD` in path parameters because raw `BTC/USD` contains a slash and is not path-safe. The API converts `BTC-USD` to `BTC/USD` internally.
 
@@ -227,6 +260,14 @@ Invoke-RestMethod -Method Post -Uri "http://127.0.0.1:8000/bot/scan-once"
 Invoke-RestMethod -Method Post -Uri "http://127.0.0.1:8000/bot/stop"
 ```
 
+Journal initialization and reads:
+
+```powershell
+Invoke-RestMethod -Method Post -Uri "http://127.0.0.1:8000/journal/init"
+Invoke-RestMethod -Uri "http://127.0.0.1:8000/journal/orders?limit=20&symbol=BTC/USD"
+Invoke-RestMethod -Uri "http://127.0.0.1:8000/journal/scans?limit=20"
+```
+
 ## Run Tests
 
 ```powershell
@@ -235,4 +276,4 @@ pytest
 
 ## Live Trading Warning
 
-Live trading is locked down and not implemented in Phase 7. Private exchange APIs, real order placement, live sell execution, and Coinbase integration are not implemented in this phase. The bot loop is paper-only and paper results do not guarantee live performance.
+Live trading is locked down and not implemented in Phase 8. Private exchange APIs, real order placement, live sell execution, backtesting, and Coinbase integration are not implemented in this phase. The bot loop is paper-only and paper results do not guarantee live performance.

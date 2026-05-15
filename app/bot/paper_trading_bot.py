@@ -12,6 +12,7 @@ from app.config import BotMode, Settings, get_settings
 from app.data.market_data_service import MarketDataService
 from app.execution.trade_executor import TradeExecutor
 from app.risk.risk_manager import RiskManager
+from app.storage.trade_journal import TradeJournal
 from app.strategies.crypto_hunter_strategy import CryptoHunterStrategy
 
 
@@ -30,6 +31,7 @@ class PaperTradingBot:
         trade_executor: TradeExecutor | None = None,
         state: BotState | None = None,
         settings: Settings | None = None,
+        journal: TradeJournal | None = None,
         now_fn=None,
     ) -> None:
         """Initialize the paper trading bot."""
@@ -39,6 +41,7 @@ class PaperTradingBot:
         self.risk_manager = risk_manager or RiskManager(settings=self.settings)
         self.trade_executor = trade_executor or TradeExecutor(settings=self.settings)
         self.state = state or BotState()
+        self.journal = journal if journal is not None else (TradeJournal() if self.settings.enable_trade_journal else None)
         self._now_fn = now_fn or (lambda: datetime.now(timezone.utc))
 
     def start(self, manual_start: bool = False) -> dict:
@@ -48,21 +51,25 @@ class PaperTradingBot:
         if not self.settings.paper_auto_trading_enabled and not manual_start:
             raise PaperTradingBotError("PAPER_AUTO_TRADING_ENABLED=false; pass manual_start=true to start manually")
         self.state.start()
+        self._journal_event("bot_started", "Paper bot started", {"manual_start": manual_start})
         return self.status()
 
     def stop(self) -> dict:
         """Stop the bot."""
         self.state.stop()
+        self._journal_event("bot_stopped", "Paper bot stopped")
         return self.status()
 
     def pause(self) -> dict:
         """Pause the bot."""
         self.state.pause()
+        self._journal_event("bot_paused", "Paper bot paused")
         return self.status()
 
     def resume(self) -> dict:
         """Resume the bot."""
         self.state.resume()
+        self._journal_event("bot_resumed", "Paper bot resumed")
         return self.status()
 
     def status(self) -> dict:
@@ -81,11 +88,14 @@ class PaperTradingBot:
             if elapsed < self.settings.bot_min_seconds_between_scans:
                 raise PaperTradingBotError("Minimum seconds between scans has not elapsed")
 
+        self._journal_event("scan_started", "Paper scan started")
         results = self.run_watchlist_scan()
         self.state.last_scan_at = now
         self.state.scans_completed += 1
         trades_executed = sum(1 for result in results if result.action_taken == "paper_buy")
         self.state.paper_trades_executed += trades_executed
+        self._journal_scan_results(results)
+        self._journal_event("scan_completed", "Paper scan completed", {"symbols_scanned": len(results), "trades_executed": trades_executed})
         return {
             "scan_results": [result.to_dict() for result in results],
             "trades_executed": trades_executed,
@@ -146,6 +156,7 @@ class PaperTradingBot:
             self.state.last_error = str(exc)
             if hasattr(self.risk_manager, "kill_switch"):
                 self.risk_manager.kill_switch.record_api_failure()
+            self._journal_error("paper_trading_bot", type(exc).__name__, str(exc), {"symbol": normalized})
             return ScanResult(symbol=normalized, action_taken="none", blockers=[str(exc)])
 
     def maybe_execute_paper_trade(self, symbol: str, signal_result, risk_decision, market_price: float) -> dict | None:
@@ -172,3 +183,35 @@ class PaperTradingBot:
     def _normalize_symbol(self, symbol: str) -> str:
         """Normalize BTC-USD to BTC/USD."""
         return symbol.strip().upper().replace("-", "/")
+
+    def _journal_scan_results(self, results: list[ScanResult]) -> None:
+        """Record scan artifacts without raising."""
+        if not self.journal:
+            return
+        for result in results:
+            try:
+                if result.signal is not None:
+                    self.journal.record_signal(result.signal)
+                if result.risk_decision is not None:
+                    self.journal.record_risk_decision(result.risk_decision)
+                self.journal.record_scan_result(result)
+            except Exception as exc:  # noqa: BLE001
+                self._journal_error("trade_journal", type(exc).__name__, str(exc), {"symbol": result.symbol})
+
+    def _journal_event(self, event_type: str, message: str, payload=None) -> None:
+        """Record bot event without raising."""
+        if not self.journal:
+            return
+        try:
+            self.journal.record_bot_event(event_type, message, payload)
+        except Exception:
+            return
+
+    def _journal_error(self, component: str, error_type: str, message: str, payload=None) -> None:
+        """Record bot error without raising."""
+        if not self.journal:
+            return
+        try:
+            self.journal.record_error(component, error_type, message, payload)
+        except Exception:
+            return

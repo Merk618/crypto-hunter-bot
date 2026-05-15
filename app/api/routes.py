@@ -10,6 +10,8 @@ from app.execution.paper_broker import PaperBroker
 from app.execution.trade_executor import TradeExecutor
 from app.exchanges.kraken_adapter import EmptyMarketDataError, InvalidSymbolError, KrakenRequestError, UnsupportedTimeframeError
 from app.risk.risk_manager import RiskManager
+from app.storage.database import init_db
+from app.storage.trade_journal import TradeJournal
 from app.strategies.crypto_hunter_strategy import CryptoHunterStrategy
 from app.strategies.indicator_engine import IndicatorEngineError
 from app.strategies.signal_scoring import SignalScoringError
@@ -21,6 +23,7 @@ _paper_broker = PaperBroker()
 _trade_executor = TradeExecutor(paper_broker=_paper_broker)
 _risk_manager = RiskManager()
 _paper_bot = PaperTradingBot(risk_manager=_risk_manager, trade_executor=_trade_executor)
+_journal = TradeJournal()
 
 
 class PaperOrderRequest(BaseModel):
@@ -297,3 +300,64 @@ def bot_scan_once() -> dict:
         return _paper_bot.scan_once()
     except PaperTradingBotError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.post("/journal/init")
+def journal_init() -> dict:
+    """Initialize journal database tables."""
+    init_db()
+    return {"status": "ok"}
+
+
+@router.get("/journal/events")
+def journal_events(limit: int = Query(default=50, ge=1, le=500)) -> dict:
+    """Return recent bot events."""
+    return {"events": _journal.get_recent_bot_events(limit=limit)}
+
+
+@router.get("/journal/signals")
+def journal_signals(limit: int = Query(default=50, ge=1, le=500), symbol: str | None = None) -> dict:
+    """Return recent signal records."""
+    return {"signals": _journal.get_recent_signals(limit=limit, symbol=symbol)}
+
+
+@router.get("/journal/risk-decisions")
+def journal_risk_decisions(limit: int = Query(default=50, ge=1, le=500), symbol: str | None = None) -> dict:
+    """Return recent risk decision records."""
+    return {"risk_decisions": _journal.get_recent_risk_decisions(limit=limit, symbol=symbol)}
+
+
+@router.get("/journal/orders")
+def journal_orders(limit: int = Query(default=50, ge=1, le=500), symbol: str | None = None) -> dict:
+    """Return recent paper orders."""
+    return {"orders": _journal.get_recent_orders(limit=limit, symbol=symbol)}
+
+
+@router.get("/journal/fills")
+def journal_fills(limit: int = Query(default=50, ge=1, le=500), symbol: str | None = None) -> dict:
+    """Return recent paper fills."""
+    return {"fills": _journal.get_recent_fills(limit=limit, symbol=symbol)}
+
+
+@router.get("/journal/positions")
+def journal_positions(symbol: str | None = None) -> dict:
+    """Return recent paper position snapshots."""
+    return {"positions": _journal.get_recent_positions(symbol=symbol)}
+
+
+@router.get("/journal/account-snapshots")
+def journal_account_snapshots(limit: int = Query(default=50, ge=1, le=500)) -> dict:
+    """Return recent account snapshots."""
+    return {"account_snapshots": _journal.get_recent_account_snapshots(limit=limit)}
+
+
+@router.get("/journal/scans")
+def journal_scans(limit: int = Query(default=50, ge=1, le=500), symbol: str | None = None) -> dict:
+    """Return recent scan results."""
+    return {"scan_results": _journal.get_recent_scan_results(limit=limit, symbol=symbol)}
+
+
+@router.get("/journal/errors")
+def journal_errors(limit: int = Query(default=50, ge=1, le=500)) -> dict:
+    """Return recent error records."""
+    return {"errors": _journal.get_recent_errors(limit=limit)}

@@ -56,6 +56,8 @@ class Settings(BaseSettings):
     bot_default_order_reason: str = Field(default="auto paper signal", alias="BOT_DEFAULT_ORDER_REASON")
     paper_allow_autobuy: bool = Field(default=True, alias="PAPER_ALLOW_AUTOBUY")
     paper_allow_autosell: bool = Field(default=False, alias="PAPER_ALLOW_AUTOSELL")
+    database_url: str = Field(default="sqlite:///./crypto_hunter.db", alias="DATABASE_URL")
+    enable_trade_journal: bool = Field(default=True, alias="ENABLE_TRADE_JOURNAL")
     kraken_api_key: str = Field(default="", alias="KRAKEN_API_KEY")
     kraken_api_secret: str = Field(default="", alias="KRAKEN_API_SECRET")
     coinbase_api_key: str = Field(default="", alias="COINBASE_API_KEY")

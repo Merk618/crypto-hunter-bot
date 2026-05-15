@@ -10,6 +10,7 @@ from app.models.trading_models import PaperFill, PaperOrder, PaperPosition, Pape
 from app.portfolio.paper_account import PaperAccount
 from app.portfolio.pnl_tracker import realized_pnl_for_sale
 from app.portfolio.positions import create_position, update_market_price
+from app.storage.trade_journal import TradeJournal
 
 
 class PaperBrokerError(ValueError):
@@ -19,12 +20,13 @@ class PaperBrokerError(ValueError):
 class PaperBroker:
     """Simulate market orders, balances, positions, fees, slippage, and PnL."""
 
-    def __init__(self, account: PaperAccount | None = None, settings: Settings | None = None) -> None:
+    def __init__(self, account: PaperAccount | None = None, settings: Settings | None = None, journal: TradeJournal | None = None) -> None:
         """Initialize the broker with a paper account and settings."""
         self.settings = settings or get_settings()
         self.account = account or PaperAccount(starting_cash=self.settings.paper_starting_cash)
         self.fee_rate = float(self.settings.paper_fee_rate)
         self.slippage_bps = float(self.settings.paper_slippage_bps)
+        self.journal = journal if journal is not None else (TradeJournal() if self.settings.enable_trade_journal else None)
 
     def get_account_summary(self) -> dict:
         """Return paper account summary."""
@@ -107,7 +109,9 @@ class PaperBroker:
             message = "Paper sell filled"
 
         self.account.mark_to_market({normalized_symbol: market_price})
-        return PaperTradeResult(True, order, fill, position, message, warnings)
+        result = PaperTradeResult(True, order, fill, position, message, warnings)
+        self._journal_trade(order, fill, position)
+        return result
 
     def close_position(self, symbol: str, market_price: float, reason: str | None = None) -> PaperTradeResult:
         """Close an open paper position at a synthetic market price."""
@@ -120,11 +124,13 @@ class PaperBroker:
     def mark_to_market(self, symbol_prices: dict[str, float]) -> dict:
         """Update paper account unrealized PnL from prices."""
         self.account.mark_to_market(symbol_prices)
+        self._journal_account_state()
         return self.account.summary()
 
     def reset(self) -> dict:
         """Reset the paper account."""
         self.account.reset()
+        self._journal_account_state()
         return self.account.summary()
 
     def place_order(self, symbol: str, side: str, order_type: str, quantity: float, price: float | None = None) -> dict:
@@ -203,3 +209,29 @@ class PaperBroker:
     def _normalize_symbol(self, symbol: str) -> str:
         """Normalize BTC-USD path symbols to BTC/USD."""
         return symbol.strip().upper().replace("-", "/")
+
+    def _journal_trade(self, order: PaperOrder, fill: PaperFill, position: PaperPosition | None) -> None:
+        """Record paper trade artifacts without crashing broker behavior."""
+        if not self.journal:
+            return
+        try:
+            self.journal.record_paper_order(order)
+            self.journal.record_paper_fill(fill)
+            if position is not None:
+                self.journal.record_paper_position(position)
+            for closed in self.account.closed_positions[-1:]:
+                self.journal.record_paper_position(closed, status="closed")
+            self.journal.record_account_snapshot(self.account.summary())
+        except Exception:
+            return
+
+    def _journal_account_state(self) -> None:
+        """Record account and position state without raising."""
+        if not self.journal:
+            return
+        try:
+            for position in self.account.open_positions.values():
+                self.journal.record_paper_position(position)
+            self.journal.record_account_snapshot(self.account.summary())
+        except Exception:
+            return
