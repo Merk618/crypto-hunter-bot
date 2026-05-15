@@ -4,6 +4,7 @@ from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
 
 from app.bot.paper_trading_bot import PaperTradingBot, PaperTradingBotError
+from app.backtesting.backtest_engine import BacktestDataError, BacktestEngine
 from app.config import get_settings
 from app.data.market_data_service import MarketDataService
 from app.execution.paper_broker import PaperBroker
@@ -67,6 +68,21 @@ class BotStartRequest(BaseModel):
     """Request body for bot start."""
 
     manual_start: bool = False
+
+
+class BacktestSingleRequest(BaseModel):
+    """Request body for single-symbol JSON-candle backtest."""
+
+    symbol: str
+    timeframe: str = "1h"
+    candles: list[dict] = Field(default_factory=list, max_length=5000)
+
+
+class BacktestWatchlistRequest(BaseModel):
+    """Request body for multi-symbol JSON-candle backtest."""
+
+    timeframe: str = "1h"
+    symbol_to_candles: dict[str, list[dict]]
 
 
 @router.get("/health")
@@ -361,3 +377,24 @@ def journal_scans(limit: int = Query(default=50, ge=1, le=500), symbol: str | No
 def journal_errors(limit: int = Query(default=50, ge=1, le=500)) -> dict:
     """Return recent error records."""
     return {"errors": _journal.get_recent_errors(limit=limit)}
+
+
+@router.post("/backtest/single")
+def backtest_single(request: BacktestSingleRequest) -> dict:
+    """Run a single-symbol backtest from JSON candles."""
+    try:
+        result = BacktestEngine().run_single_symbol_backtest(pd.DataFrame(request.candles), request.symbol, request.timeframe)
+        return result.to_dict()
+    except BacktestDataError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.post("/backtest/watchlist")
+def backtest_watchlist(request: BacktestWatchlistRequest) -> dict:
+    """Run watchlist backtests from JSON candles."""
+    try:
+        frames = {symbol: pd.DataFrame(candles) for symbol, candles in request.symbol_to_candles.items()}
+        results = BacktestEngine().run_watchlist_backtest(frames, timeframe=request.timeframe)
+        return {"results": {symbol: result.to_dict() for symbol, result in results.items()}}
+    except BacktestDataError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc

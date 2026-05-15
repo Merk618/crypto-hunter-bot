@@ -4,7 +4,7 @@ Crypto Hunter is a backend trading engine for a sophisticated crypto trading bot
 
 ## Current Phase
 
-Phase 8 SQLite persistence and trade journal:
+Phase 9 backtesting engine:
 
 - Clean Python backend project
 - FastAPI health and status endpoints
@@ -21,6 +21,7 @@ Phase 8 SQLite persistence and trade journal:
 - Risk validation, position sizing, cooldown controls, and kill-switch controls
 - Manual paper auto-trading scans that combine market data, signals, risk checks, and paper buys
 - SQLite trade journal for bot events, signals, risk decisions, paper orders/fills/positions, account snapshots, scan results, and errors
+- Offline backtesting engine with trades, equity curve, drawdown, win rate, fees, slippage, and performance metrics
 
 Live trading and real exchange order execution are not implemented yet.
 
@@ -172,6 +173,26 @@ Stored records:
 
 API keys and secret-looking payload fields are scrubbed before JSON payloads are stored.
 
+## Backtesting
+
+Phase 9 adds offline backtesting from historical candle DataFrames or JSON candles. It never calls private exchange APIs and never places orders.
+
+Anti-lookahead rule:
+
+- A signal generated on candle `N` can only execute on candle `N+1`.
+- The default simulated execution price is the next candle open.
+
+Assumptions:
+
+- Long-only; shorts are disabled by default.
+- Entry requires `STRONG_BUY`, minimum score, no hard blockers, and price above EMA 200.
+- Exits can occur from stop loss, take profit, bearish MACD, losing EMA 20 after profit, RSI overbought cross-down, or the final candle.
+- Buy slippage: `price * (1 + slippage_bps / 10000)`.
+- Sell slippage: `price * (1 - slippage_bps / 10000)`.
+- Fee: `notional * fee_rate`.
+
+Backtests are research tools. They do not guarantee future performance.
+
 ## Safety Defaults
 
 The default configuration is intentionally conservative:
@@ -224,6 +245,8 @@ Then open:
 - `http://127.0.0.1:8000/journal/account-snapshots`
 - `http://127.0.0.1:8000/journal/scans`
 - `http://127.0.0.1:8000/journal/errors`
+- `http://127.0.0.1:8000/backtest/single`
+- `http://127.0.0.1:8000/backtest/watchlist`
 
 Use `BTC-USD` in path parameters because raw `BTC/USD` contains a slash and is not path-safe. The API converts `BTC-USD` to `BTC/USD` internally.
 
@@ -268,6 +291,12 @@ Invoke-RestMethod -Uri "http://127.0.0.1:8000/journal/orders?limit=20&symbol=BTC
 Invoke-RestMethod -Uri "http://127.0.0.1:8000/journal/scans?limit=20"
 ```
 
+Backtest with JSON candles:
+
+```powershell
+Invoke-RestMethod -Method Post -Uri "http://127.0.0.1:8000/backtest/single" -ContentType "application/json" -Body '{"symbol":"BTC/USD","timeframe":"1h","candles":[{"timestamp":"2026-01-01T00:00:00Z","open":65000,"high":66000,"low":64000,"close":65500,"volume":100}]}'
+```
+
 ## Run Tests
 
 ```powershell
@@ -276,4 +305,4 @@ pytest
 
 ## Live Trading Warning
 
-Live trading is locked down and not implemented in Phase 8. Private exchange APIs, real order placement, live sell execution, backtesting, and Coinbase integration are not implemented in this phase. The bot loop is paper-only and paper results do not guarantee live performance.
+Live trading is locked down and not implemented in Phase 9. Private exchange APIs, real order placement, live sell execution, and Coinbase integration are not implemented in this phase. The bot loop is paper-only, and paper/backtest results do not guarantee live performance.
