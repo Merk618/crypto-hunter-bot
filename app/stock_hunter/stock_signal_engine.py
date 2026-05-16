@@ -81,7 +81,7 @@ class StockSignalEngine:
     def _latest_price(self, quote: dict | None, candles: list[dict] | None) -> float | None:
         """Read latest price from quote or candles."""
         if quote:
-            value = self._value(quote, "last_price") or self._value(quote, "last")
+            value = self._value(quote, "latest_price") or self._value(quote, "last_price") or self._value(quote, "last")
             if value is not None and value > 0:
                 return value
         if candles:

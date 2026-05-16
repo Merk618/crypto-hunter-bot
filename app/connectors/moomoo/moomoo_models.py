@@ -56,16 +56,23 @@ class MooMooCapabilityReport:
 
 @dataclass(frozen=True)
 class MooMooQuoteSnapshot:
-    """Read-only quote snapshot placeholder."""
+    """Read-only quote snapshot."""
 
     symbol: str
     available: bool
     message: str
-    last_price: float | None = None
+    provider_symbol: str | None = None
+    latest_price: float | None = None
+    open: float | None = None
+    high: float | None = None
+    low: float | None = None
+    previous_close: float | None = None
+    volume: float | None = None
+    turnover: float | None = None
     bid: float | None = None
     ask: float | None = None
     timestamp: str = field(default_factory=_utc_now)
-    source: str = "moomoo_readonly_quote_snapshot_v1"
+    source: str = "moomoo_readonly_quote"
 
     def to_dict(self) -> dict:
         """Return JSON-friendly output."""
@@ -74,16 +81,18 @@ class MooMooQuoteSnapshot:
 
 @dataclass(frozen=True)
 class MooMooCandle:
-    """Read-only candle placeholder."""
+    """Read-only candle."""
 
     symbol: str
+    provider_symbol: str
     timestamp: str
     open: float
     high: float
     low: float
     close: float
     volume: float
-    source: str = "moomoo_readonly_candle_v1"
+    turnover: float | None = None
+    source: str = "moomoo_readonly_candles"
 
     def to_dict(self) -> dict:
         """Return JSON-friendly output."""
@@ -92,13 +101,25 @@ class MooMooCandle:
 
 @dataclass(frozen=True)
 class MooMooOptionContract:
-    """Read-only option contract placeholder."""
+    """Read-only normalized option contract."""
 
     symbol: str
     underlying: str
     expiration: str | None
     strike: float | None
     option_type: str | None
+    bid: float | None = None
+    ask: float | None = None
+    last: float | None = None
+    volume: int | None = None
+    open_interest: int | None = None
+    implied_volatility: float | None = None
+    delta: float | None = None
+    gamma: float | None = None
+    theta: float | None = None
+    vega: float | None = None
+    spread_pct: float | None = None
+    liquidity_score: float = 0.0
     source: str = "moomoo_readonly_option_contract_v1"
 
     def to_dict(self) -> dict:

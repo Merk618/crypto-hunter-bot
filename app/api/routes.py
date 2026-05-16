@@ -7,6 +7,7 @@ from app.bot.paper_trading_bot import PaperTradingBotError
 from app.backtesting.backtest_engine import BacktestDataError, BacktestEngine
 from app.config import get_settings
 from app.connectors.moomoo.moomoo_config import get_moomoo_config
+from app.connectors.moomoo.moomoo_market_data import MooMooMarketData
 from app.connectors.moomoo.moomoo_readonly_client import MooMooReadOnlyClient
 from app.execution.order_intent import OrderIntent
 from app.core.app_state import AppState
@@ -641,6 +642,24 @@ def moomoo_health() -> dict:
 def moomoo_capabilities() -> dict:
     """Return planned MooMoo read-only capabilities."""
     return MooMooReadOnlyClient(settings=get_settings()).get_supported_capabilities().to_dict()
+
+
+@router.get("/moomoo/quote/{symbol}")
+def moomoo_quote(symbol: str) -> dict:
+    """Return read-only MooMoo quote data when available."""
+    return MooMooMarketData(settings=get_settings()).get_quote_snapshot(symbol)
+
+
+@router.get("/moomoo/candles/{symbol}")
+def moomoo_candles(symbol: str, timeframe: str = Query(default="1d"), limit: int = Query(default=250, ge=1, le=5000)) -> dict:
+    """Return read-only MooMoo candles when available."""
+    return MooMooMarketData(settings=get_settings()).get_historical_candles(symbol, timeframe=timeframe, limit=limit)
+
+
+@router.get("/moomoo/options/{symbol}")
+def moomoo_options(symbol: str) -> dict:
+    """Return read-only MooMoo option-chain data when available."""
+    return MooMooMarketData(settings=get_settings()).get_option_chain(symbol)
 
 
 @router.get("/stock-hunter/status")

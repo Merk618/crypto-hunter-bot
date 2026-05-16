@@ -37,7 +37,13 @@ class StockScanner:
             return StockScannerResult(normalized, signal.to_dict(), None, "NO_ACTION", notes, warnings, blockers)
 
         quote = self.moomoo_client.get_quote_snapshot(normalized)
-        signal = self.signal_engine.score(normalized, quote=quote)
+        if not quote.get("available"):
+            blockers.append(quote.get("message", "MooMoo quote unavailable"))
+            signal = self.signal_engine.score(normalized)
+            return StockScannerResult(normalized, signal.to_dict(), None, "NO_ACTION", notes, warnings, blockers)
+        candles_response = self.moomoo_client.get_historical_candles(normalized, "1d", 50)
+        candles = candles_response.get("candles", []) if candles_response.get("available") else []
+        signal = self.signal_engine.score(normalized, quote=quote, candles=candles)
         options = self.moomoo_client.get_option_chain(normalized)
         analysis = self.options_analyzer.analyze(normalized, options.get("contracts", []))
         return StockScannerResult(normalized, signal.to_dict(), analysis.to_dict(), "RESEARCH_ONLY", notes, warnings, blockers)

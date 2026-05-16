@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from app.config import Settings, get_settings
+from app.connectors.moomoo.moomoo_market_data import MooMooMarketData
 from app.connectors.moomoo.moomoo_readonly_client import MooMooReadOnlyClient
 from app.stock_hunter.options_chain_analyzer import OptionsChainAnalyzer
 from app.stock_hunter.stock_scanner import StockScanner
@@ -18,13 +19,15 @@ class StockHunterService:
         settings: Settings | None = None,
         watchlist: StockWatchlist | None = None,
         moomoo_client: MooMooReadOnlyClient | None = None,
+        market_data: MooMooMarketData | None = None,
         scanner: StockScanner | None = None,
         options_analyzer: OptionsChainAnalyzer | None = None,
     ) -> None:
         """Initialize service."""
         self.settings = settings or get_settings()
         self.watchlist = watchlist or StockWatchlist(settings=self.settings)
-        self.moomoo_client = moomoo_client or MooMooReadOnlyClient(settings=self.settings)
+        self.market_data = market_data or MooMooMarketData(settings=self.settings)
+        self.moomoo_client = moomoo_client or MooMooReadOnlyClient(settings=self.settings, market_data=self.market_data)
         self.options_analyzer = options_analyzer or OptionsChainAnalyzer(settings=self.settings)
         self.scanner = scanner or StockScanner(self.moomoo_client, StockSignalEngine(), self.options_analyzer)
 

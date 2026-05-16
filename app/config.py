@@ -97,6 +97,8 @@ class Settings(BaseSettings):
     moomoo_unlock_trade_context: bool = Field(default=False, alias="MOOMOO_UNLOCK_TRADE_CONTEXT")
     moomoo_account_id: str = Field(default="", alias="MOOMOO_ACCOUNT_ID")
     moomoo_market_region: str = Field(default="US", alias="MOOMOO_MARKET_REGION")
+    moomoo_candle_limit_default: int = Field(default=250, gt=0, alias="MOOMOO_CANDLE_LIMIT_DEFAULT")
+    moomoo_quote_timeout_seconds: int = Field(default=10, gt=0, alias="MOOMOO_QUOTE_TIMEOUT_SECONDS")
     stock_hunter_enabled: bool = Field(default=False, alias="STOCK_HUNTER_ENABLED")
     stock_hunter_default_symbols: list[str] = Field(default_factory=lambda: ["AAPL", "MSFT", "NVDA", "META", "AMZN", "GOOGL", "TSLA"], alias="STOCK_HUNTER_DEFAULT_SYMBOLS")
     stock_hunter_enable_options_analysis: bool = Field(default=True, alias="STOCK_HUNTER_ENABLE_OPTIONS_ANALYSIS")
