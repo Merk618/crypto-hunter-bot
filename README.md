@@ -4,7 +4,7 @@ Crypto Hunter is a backend trading engine for a sophisticated crypto trading bot
 
 ## Current Phase
 
-Phase 25 strategy calibration from paper observation:
+Phase 26 longer paper observation windows:
 
 - Clean Python backend project
 - FastAPI health and status endpoints
@@ -42,6 +42,7 @@ Phase 25 strategy calibration from paper observation:
 - Production-style report filtering, journal hygiene previews, deduped daily briefings, and paper-observation readiness checks
 - Manual paper observation mode for Kraken public data, signal generation, risk evaluation, observation logs, and observation reports
 - Read-only strategy calibration reports from paper observation results, including EMA 200 blocker analysis, low-score bottleneck detection, and threshold recommendations that cannot auto-apply
+- Longer manual paper observation sessions that collect multiple observation runs, summarize repeated blockers, track watchlist candidates, and calculate calibration readiness
 
 Live trading and real exchange order execution are not implemented yet. Crypto Hunter remains standalone-first; YucaTanaTrades frontend integration comes later after local reliability is proven.
 
@@ -684,6 +685,33 @@ Invoke-RestMethod -Uri "http://127.0.0.1:8000/calibration/recommendations"
 
 Calibration is read-only. `CALIBRATION_ALLOW_AUTO_APPLY=false` by default, and Phase 25 does not lower `MIN_SIGNAL_SCORE_TO_TRADE`, loosen risk rules, or modify strategy code. The next recommended phase is a longer paper observation window before any manual threshold review.
 
+## Phase 26 Observation Windows
+
+Phase 26 adds longer manual paper observation sessions. A session tracks multiple observation runs over time and summarizes whether signal behavior is consistent enough for later human review.
+
+Docs:
+
+- [Observation Window Phase 26](docs/OBSERVATION_WINDOW_PHASE26.md)
+
+Observation window endpoints:
+
+- `GET /observation/window/status`
+- `POST /observation/window/start`
+- `POST /observation/window/run-next`
+- `POST /observation/window/stop`
+- `GET /observation/window/summary`
+- `POST /observation/window/reset`
+
+Examples:
+
+```powershell
+Invoke-RestMethod -Method Post -Uri "http://127.0.0.1:8000/observation/window/start" -ContentType "application/json" -Body '{"target_runs":6,"allow_paper_trades":false}'
+Invoke-RestMethod -Method Post -Uri "http://127.0.0.1:8000/observation/window/run-next" -ContentType "application/json" -Body '{"manual_run":true,"ignore_interval":true}'
+Invoke-RestMethod -Uri "http://127.0.0.1:8000/observation/window/summary"
+```
+
+Observation windows do not run an infinite loop inside FastAPI requests. Paper trades remain disabled unless both config and request explicitly allow them, and even then only the paper broker can be used.
+
 ## Safety Defaults
 
 The default configuration is intentionally conservative:
@@ -692,7 +720,7 @@ The default configuration is intentionally conservative:
 - `ENABLE_LIVE_TRADING=false`
 - `REQUIRE_LIVE_CONFIRMATION=true`
 - `LiveBroker` refuses orders unless every live safety condition passes
-- `ExecutionGuard` always reports live execution unavailable in Phase 25
+- `ExecutionGuard` always reports live execution unavailable in Phase 26
 - `SafetyAudit` must pass before future execution work
 - Exchange API secrets are never returned by API routes
 - No withdrawal functionality exists in this repository
@@ -968,6 +996,15 @@ Invoke-RestMethod -Uri "http://127.0.0.1:8000/calibration/report"
 Invoke-RestMethod -Uri "http://127.0.0.1:8000/calibration/recommendations"
 ```
 
+Observation window examples:
+
+```powershell
+Invoke-RestMethod -Uri "http://127.0.0.1:8000/observation/window/status"
+Invoke-RestMethod -Method Post -Uri "http://127.0.0.1:8000/observation/window/start" -ContentType "application/json" -Body '{"target_runs":6,"allow_paper_trades":false}'
+Invoke-RestMethod -Method Post -Uri "http://127.0.0.1:8000/observation/window/run-next" -ContentType "application/json" -Body '{"manual_run":true,"ignore_interval":true}'
+Invoke-RestMethod -Uri "http://127.0.0.1:8000/observation/window/summary"
+```
+
 ## Run Tests
 
 ```powershell
@@ -976,4 +1013,4 @@ Invoke-RestMethod -Uri "http://127.0.0.1:8000/calibration/recommendations"
 
 ## Live Trading Warning
 
-Live trading is locked down and not implemented in Phase 25. Kraken private access is read-only account data only. MooMoo is read-only market data only. Stock/Options Hunter, Options Scanner, alerts, unified reports, operator tooling, validation tooling, journal hygiene, observation readiness, paper observation, and calibration are read-only or paper-only scanner/research/reporting/status/checking modes. Real order placement, live sell execution, live cancel execution, withdrawals, transfers, funding, staking, margin trading, options execution, external alert delivery, and Coinbase integration are not implemented in this phase. Reporting, alerts, operator, validation, journal hygiene, observation, calibration, system, diagnostics, MooMoo, Stock/Options Hunter, and Options Scanner endpoints do not perform real exchange execution. Dry-run execution is only a preview, and paper/backtest/smoke-test/scanner/reporting/validation/observation/calibration results do not guarantee live performance.
+Live trading is locked down and not implemented in Phase 26. Kraken private access is read-only account data only. MooMoo is read-only market data only. Stock/Options Hunter, Options Scanner, alerts, unified reports, operator tooling, validation tooling, journal hygiene, observation readiness, paper observation, observation windows, and calibration are read-only or paper-only scanner/research/reporting/status/checking modes. Real order placement, live sell execution, live cancel execution, withdrawals, transfers, funding, staking, margin trading, options execution, external alert delivery, and Coinbase integration are not implemented in this phase. Reporting, alerts, operator, validation, journal hygiene, observation, observation window, calibration, system, diagnostics, MooMoo, Stock/Options Hunter, and Options Scanner endpoints do not perform real exchange execution. Dry-run execution is only a preview, and paper/backtest/smoke-test/scanner/reporting/validation/observation/calibration results do not guarantee live performance.

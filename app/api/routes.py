@@ -34,6 +34,7 @@ from app.diagnostics.smoke_test_runner import SmokeTestRunner
 from app.exchanges.kraken_adapter import EmptyMarketDataError, InvalidSymbolError, KrakenRequestError, UnsupportedTimeframeError
 from app.journal.journal_hygiene import JournalHygiene
 from app.observation.observation_readiness import ObservationReadinessChecker
+from app.observation.observation_session import ObservationSessionManager
 from app.observation.paper_observation_engine import PaperObservationEngine
 from app.operator.operator_service import OperatorService
 from app.storage.database import init_db
@@ -49,6 +50,7 @@ import pandas as pd
 router = APIRouter()
 _app_state = AppState()
 _paper_observation_engine = PaperObservationEngine(settings=get_settings())
+_observation_session_manager = ObservationSessionManager(_paper_observation_engine, settings=get_settings())
 
 
 class PaperOrderRequest(BaseModel):
@@ -84,6 +86,20 @@ class ObservationRunRequest(BaseModel):
 
     manual_run: bool = True
     allow_paper_trades: bool = False
+
+
+class ObservationWindowStartRequest(BaseModel):
+    """Request body for starting an observation window."""
+
+    target_runs: int | None = Field(default=None, ge=1)
+    allow_paper_trades: bool = False
+
+
+class ObservationWindowRunRequest(BaseModel):
+    """Request body for running the next observation window pass."""
+
+    manual_run: bool = True
+    ignore_interval: bool = False
 
 
 class PaperCloseRequest(BaseModel):
@@ -850,6 +866,42 @@ def calibration_recommendations() -> dict:
         "auto_apply_allowed": False,
         "source": "crypto_hunter_calibration_recommendations_v1",
     }
+
+
+@router.get("/observation/window/status")
+def observation_window_status() -> dict:
+    """Return paper observation window status."""
+    return _observation_session_manager.get_session_status()
+
+
+@router.post("/observation/window/start")
+def observation_window_start(request: ObservationWindowStartRequest) -> dict:
+    """Start a manual observation window without running a background loop."""
+    return _observation_session_manager.start_session(target_runs=request.target_runs, allow_paper_trades=request.allow_paper_trades)
+
+
+@router.post("/observation/window/run-next")
+def observation_window_run_next(request: ObservationWindowRunRequest) -> dict:
+    """Run the next observation window pass manually."""
+    return _observation_session_manager.run_next_observation(manual_run=request.manual_run, ignore_interval=request.ignore_interval)
+
+
+@router.post("/observation/window/stop")
+def observation_window_stop() -> dict:
+    """Stop the active observation window."""
+    return _observation_session_manager.stop_session()
+
+
+@router.get("/observation/window/summary")
+def observation_window_summary() -> dict:
+    """Return current observation window summary."""
+    return _observation_session_manager.get_window_summary()
+
+
+@router.post("/observation/window/reset")
+def observation_window_reset() -> dict:
+    """Reset observation window state."""
+    return _observation_session_manager.reset_session()
 
 
 @router.get("/diagnostics/smoke-test")

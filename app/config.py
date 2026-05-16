@@ -172,11 +172,21 @@ class Settings(BaseSettings):
     calibration_warn_low_score_rate: float = Field(default=0.75, ge=0, le=1, alias="CALIBRATION_WARN_LOW_SCORE_RATE")
     calibration_min_sample_size_for_changes: int = Field(default=20, ge=1, alias="CALIBRATION_MIN_SAMPLE_SIZE_FOR_CHANGES")
     calibration_allow_auto_apply: bool = Field(default=False, alias="CALIBRATION_ALLOW_AUTO_APPLY")
+    observation_window_enabled: bool = Field(default=False, alias="OBSERVATION_WINDOW_ENABLED")
+    observation_window_read_only: bool = Field(default=True, alias="OBSERVATION_WINDOW_READ_ONLY")
+    observation_window_allow_paper_trades: bool = Field(default=False, alias="OBSERVATION_WINDOW_ALLOW_PAPER_TRADES")
+    observation_window_default_runs: int = Field(default=6, ge=1, alias="OBSERVATION_WINDOW_DEFAULT_RUNS")
+    observation_window_min_runs_for_summary: int = Field(default=3, ge=1, alias="OBSERVATION_WINDOW_MIN_RUNS_FOR_SUMMARY")
+    observation_window_minutes_between_runs: int = Field(default=60, ge=0, alias="OBSERVATION_WINDOW_MINUTES_BETWEEN_RUNS")
+    observation_window_max_runs_per_day: int = Field(default=12, ge=1, alias="OBSERVATION_WINDOW_MAX_RUNS_PER_DAY")
+    observation_window_symbols: list[str] = Field(default_factory=lambda: ["BTC/USD", "ETH/USD", "SOL/USD", "SUI/USD"], alias="OBSERVATION_WINDOW_SYMBOLS")
+    observation_window_timeframe: str = Field(default="1h", alias="OBSERVATION_WINDOW_TIMEFRAME")
+    observation_window_candle_limit: int = Field(default=250, ge=1, alias="OBSERVATION_WINDOW_CANDLE_LIMIT")
     coinbase_api_key: str = Field(default="", alias="COINBASE_API_KEY")
     coinbase_api_secret: str = Field(default="", alias="COINBASE_API_SECRET")
     discord_webhook_url: str = Field(default="", alias="DISCORD_WEBHOOK_URL")
 
-    @field_validator("allowed_symbols", "phase14_smoke_symbols", "validation_symbols_crypto", "paper_observation_symbols", mode="before")
+    @field_validator("allowed_symbols", "phase14_smoke_symbols", "validation_symbols_crypto", "paper_observation_symbols", "observation_window_symbols", mode="before")
     @classmethod
     def parse_allowed_symbols(cls, value: str | list[str]) -> list[str]:
         """Parse comma-delimited symbols from environment variables."""
@@ -238,6 +248,10 @@ class Settings(BaseSettings):
             raise ValueError("PAPER_OBSERVATION_READ_ONLY must remain true in this phase")
         if not self.calibration_read_only or self.calibration_allow_auto_apply:
             raise ValueError("Calibration must remain read-only and auto-apply disabled")
+        if not self.observation_window_read_only:
+            raise ValueError("OBSERVATION_WINDOW_READ_ONLY must remain true in this phase")
+        if self.observation_window_allow_paper_trades and not self.paper_observation_allow_paper_trades:
+            raise ValueError("Observation window paper trades require paper observation paper trades to be enabled too")
         return self
 
     def has_exchange_api_keys(self) -> bool:
