@@ -31,6 +31,8 @@ from app.core.safety_audit import SafetyAudit
 from app.diagnostics.calibration_report import CalibrationReport
 from app.diagnostics.smoke_test_runner import SmokeTestRunner
 from app.exchanges.kraken_adapter import EmptyMarketDataError, InvalidSymbolError, KrakenRequestError, UnsupportedTimeframeError
+from app.journal.journal_hygiene import JournalHygiene
+from app.observation.observation_readiness import ObservationReadinessChecker
 from app.operator.operator_service import OperatorService
 from app.storage.database import init_db
 from app.stock_hunter.stock_hunter_service import StockHunterService
@@ -750,6 +752,31 @@ def validation_moomoo() -> dict:
 def validation_report() -> dict:
     """Return full read-only validation report."""
     return RealDataValidator(settings=get_settings()).run_all_checks()
+
+
+@router.get("/journal/hygiene/summary")
+def journal_hygiene_summary(limit: int = Query(default=500, ge=1, le=5000)) -> dict:
+    """Return preview-only journal hygiene summary."""
+    return JournalHygiene(get_trade_journal()).summarize_test_records(limit=limit)
+
+
+@router.get("/journal/hygiene/test-records")
+def journal_hygiene_test_records(limit: int = Query(default=500, ge=1, le=5000)) -> dict:
+    """Return detected fake/test/demo journal records."""
+    records = JournalHygiene(get_trade_journal()).detect_test_records(limit=limit)
+    return {"records": records, "count": len(records), "preview_only": True, "source": "crypto_hunter_journal_test_records_v1"}
+
+
+@router.get("/journal/hygiene/production-preview")
+def journal_hygiene_production_preview(limit: int = Query(default=500, ge=1, le=5000)) -> dict:
+    """Return production-style records without deleting anything."""
+    return JournalHygiene(get_trade_journal()).production_preview(limit=limit)
+
+
+@router.get("/observation/readiness")
+def observation_readiness() -> dict:
+    """Return readiness for long-running paper observation mode."""
+    return ObservationReadinessChecker().check()
 
 
 @router.get("/diagnostics/smoke-test")

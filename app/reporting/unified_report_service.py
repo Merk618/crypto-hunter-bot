@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 
 from app.config import Settings, get_settings
 from app.core.safety_audit import SafetyAudit
+from app.journal.journal_filters import dedupe_candidates, filter_production_records
 from app.reporting.candidate_summary import candidate_from_crypto_signal, candidate_from_ranked_option, candidate_from_stock_result
 from app.reporting.dashboard_service import DashboardService
 from app.stock_hunter.stock_hunter_service import StockHunterService
@@ -43,9 +44,9 @@ class UnifiedReportService:
         stock = self._stock_candidates()
         options = self._option_candidates()
         return {
-            "crypto": [candidate.to_dict() for candidate in crypto],
-            "stocks": [candidate.to_dict() for candidate in stock],
-            "options": [candidate.to_dict() for candidate in options],
+            "crypto": dedupe_candidates([candidate.to_dict() for candidate in crypto]),
+            "stocks": dedupe_candidates([candidate.to_dict() for candidate in stock]),
+            "options": dedupe_candidates([candidate.to_dict() for candidate in options]),
             "generated_at": self._now(),
             "source": "yucatanatrades_top_candidates_v1",
         }
@@ -84,21 +85,24 @@ class UnifiedReportService:
     def _crypto_candidates(self) -> list:
         """Read recent crypto signal records from the journal."""
         report = self._safe(lambda: self.dashboard_service.get_signal_performance(limit=100).to_dict(), {"recent_signals": []})
-        candidates = [candidate_from_crypto_signal(signal) for signal in report.get("recent_signals", [])]
+        records = filter_production_records(report.get("recent_signals", []))
+        candidates = [candidate_from_crypto_signal(signal) for signal in records]
         filtered = [candidate for candidate in candidates if candidate.score >= self.settings.alert_min_crypto_score]
         return sorted(filtered, key=lambda item: item.score, reverse=True)[: self.settings.alert_max_items_per_section]
 
     def _stock_candidates(self) -> list:
         """Read Stock Hunter top candidates."""
         response = self._safe(lambda: self.stock_service.top_candidates(limit=self.settings.alert_max_items_per_section), {"results": []})
-        candidates = [candidate_from_stock_result(result) for result in response.get("results", [])]
+        records = filter_production_records(response.get("results", []))
+        candidates = [candidate_from_stock_result(result) for result in records]
         filtered = [candidate for candidate in candidates if candidate.score >= self.settings.alert_min_stock_score]
         return sorted(filtered, key=lambda item: item.score, reverse=True)[: self.settings.alert_max_items_per_section]
 
     def _option_candidates(self) -> list:
         """Read Options Scanner top candidates."""
         response = self._safe(lambda: self.stock_service.top_options(limit=self.settings.alert_max_items_per_section), {"top_candidates": []})
-        candidates = [candidate_from_ranked_option(contract) for contract in response.get("top_candidates", [])]
+        records = filter_production_records(response.get("top_candidates", []))
+        candidates = [candidate_from_ranked_option(contract) for contract in records]
         filtered = [candidate for candidate in candidates if candidate.score >= self.settings.alert_min_options_score]
         return sorted(filtered, key=lambda item: item.score, reverse=True)[: self.settings.alert_max_items_per_section]
 

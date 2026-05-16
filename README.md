@@ -4,7 +4,7 @@ Crypto Hunter is a backend trading engine for a sophisticated crypto trading bot
 
 ## Current Phase
 
-Phase 22 real-data validation runbook:
+Phase 23 reporting hygiene and observation readiness:
 
 - Clean Python backend project
 - FastAPI health and status endpoints
@@ -39,6 +39,7 @@ Phase 22 real-data validation runbook:
 - Read-only alert previews, daily briefing summaries, and unified top-candidate reporting across crypto, stocks, and options
 - Standalone operator status, startup checks, command summaries, daily briefing scripts, and local runbook endpoints
 - Read-only real-data validation helpers, scripts, and local Windows runbook for Kraken public data and optional MooMoo/OpenD checks
+- Production-style report filtering, journal hygiene previews, deduped daily briefings, and paper-observation readiness checks
 
 Live trading and real exchange order execution are not implemented yet. Crypto Hunter remains standalone-first; YucaTanaTrades frontend integration comes later after local reliability is proven.
 
@@ -612,6 +613,26 @@ Validation scripts:
 
 Unavailable Kraken or MooMoo/OpenD data returns structured warnings or blockers instead of crashing. This remains standalone-first; YucaTanaTrades integration is still later.
 
+## Phase 23 Reporting Hygiene and Observation Readiness
+
+Phase 23 filters fake/test/demo records from production-style reports and adds readiness checks before long-running paper observation mode.
+
+Docs:
+
+- [Reporting Hygiene and Observation Readiness Phase 23](docs/PHASE23_REPORTING_HYGIENE_OBSERVATION_READINESS.md)
+
+Journal hygiene endpoints:
+
+- `GET /journal/hygiene/summary`
+- `GET /journal/hygiene/test-records`
+- `GET /journal/hygiene/production-preview`
+
+Observation endpoint:
+
+- `GET /observation/readiness`
+
+Daily briefings now exclude fake/test/demo candidates by default, dedupe repeated candidates, and normalize malformed warnings/blockers.
+
 ## Safety Defaults
 
 The default configuration is intentionally conservative:
@@ -620,7 +641,7 @@ The default configuration is intentionally conservative:
 - `ENABLE_LIVE_TRADING=false`
 - `REQUIRE_LIVE_CONFIRMATION=true`
 - `LiveBroker` refuses orders unless every live safety condition passes
-- `ExecutionGuard` always reports live execution unavailable in Phase 22
+- `ExecutionGuard` always reports live execution unavailable in Phase 23
 - `SafetyAudit` must pass before future execution work
 - Exchange API secrets are never returned by API routes
 - No withdrawal functionality exists in this repository
@@ -870,6 +891,15 @@ Invoke-RestMethod -Uri "http://127.0.0.1:8000/validation/report"
 .\.venv\Scripts\python.exe scripts\validate_moomoo_readonly.py
 ```
 
+Journal hygiene and observation readiness examples:
+
+```powershell
+Invoke-RestMethod -Uri "http://127.0.0.1:8000/journal/hygiene/summary"
+Invoke-RestMethod -Uri "http://127.0.0.1:8000/journal/hygiene/test-records"
+Invoke-RestMethod -Uri "http://127.0.0.1:8000/journal/hygiene/production-preview"
+Invoke-RestMethod -Uri "http://127.0.0.1:8000/observation/readiness"
+```
+
 ## Run Tests
 
 ```powershell
@@ -878,4 +908,4 @@ Invoke-RestMethod -Uri "http://127.0.0.1:8000/validation/report"
 
 ## Live Trading Warning
 
-Live trading is locked down and not implemented in Phase 22. Kraken private access is read-only account data only. MooMoo is read-only market data only. Stock/Options Hunter, Options Scanner, alerts, unified reports, operator tooling, and validation tooling are read-only scanner/research/reporting/status/checking only. Real order placement, live sell execution, live cancel execution, withdrawals, transfers, funding, staking, margin trading, options execution, external alert delivery, and Coinbase integration are not implemented in this phase. Reporting, alerts, operator, validation, system, diagnostics, MooMoo, Stock/Options Hunter, and Options Scanner endpoints do not perform real exchange execution. Dry-run execution is only a preview, and paper/backtest/smoke-test/scanner/reporting/validation results do not guarantee live performance.
+Live trading is locked down and not implemented in Phase 23. Kraken private access is read-only account data only. MooMoo is read-only market data only. Stock/Options Hunter, Options Scanner, alerts, unified reports, operator tooling, validation tooling, journal hygiene, and observation readiness are read-only scanner/research/reporting/status/checking only. Real order placement, live sell execution, live cancel execution, withdrawals, transfers, funding, staking, margin trading, options execution, external alert delivery, and Coinbase integration are not implemented in this phase. Reporting, alerts, operator, validation, journal hygiene, observation, system, diagnostics, MooMoo, Stock/Options Hunter, and Options Scanner endpoints do not perform real exchange execution. Dry-run execution is only a preview, and paper/backtest/smoke-test/scanner/reporting/validation results do not guarantee live performance.

@@ -1,0 +1,1 @@
+"""Paper observation readiness helpers."""

@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 from app.alerts.alert_models import AlertCandidate
+from app.journal.journal_filters import normalize_reasons_warnings_blockers
 
 
 def candidate_from_crypto_signal(signal: dict) -> AlertCandidate:
     """Normalize a crypto signal record."""
+    signal = normalize_reasons_warnings_blockers(signal)
     symbol = str(signal.get("symbol", "UNKNOWN"))
     score = float(signal.get("score", 0) or 0)
     return AlertCandidate(
@@ -26,7 +28,9 @@ def candidate_from_crypto_signal(signal: dict) -> AlertCandidate:
 
 def candidate_from_stock_result(result: dict) -> AlertCandidate:
     """Normalize a Stock Hunter scanner result."""
+    result = normalize_reasons_warnings_blockers(result)
     signal = result.get("stock_signal") or result
+    signal = normalize_reasons_warnings_blockers(signal)
     symbol = str(result.get("symbol") or signal.get("symbol") or "UNKNOWN")
     score = float(signal.get("score", result.get("opportunity_score", 0)) or 0)
     return AlertCandidate(
@@ -45,6 +49,7 @@ def candidate_from_stock_result(result: dict) -> AlertCandidate:
 
 def candidate_from_ranked_option(contract: dict) -> AlertCandidate:
     """Normalize a ranked option contract."""
+    contract = normalize_reasons_warnings_blockers(contract)
     symbol = str(contract.get("symbol", "UNKNOWN"))
     return AlertCandidate(
         asset_class="option",
