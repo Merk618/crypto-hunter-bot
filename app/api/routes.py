@@ -33,6 +33,7 @@ from app.diagnostics.smoke_test_runner import SmokeTestRunner
 from app.exchanges.kraken_adapter import EmptyMarketDataError, InvalidSymbolError, KrakenRequestError, UnsupportedTimeframeError
 from app.journal.journal_hygiene import JournalHygiene
 from app.observation.observation_readiness import ObservationReadinessChecker
+from app.observation.paper_observation_engine import PaperObservationEngine
 from app.operator.operator_service import OperatorService
 from app.storage.database import init_db
 from app.stock_hunter.stock_hunter_service import StockHunterService
@@ -46,6 +47,7 @@ import pandas as pd
 
 router = APIRouter()
 _app_state = AppState()
+_paper_observation_engine = PaperObservationEngine(settings=get_settings())
 
 
 class PaperOrderRequest(BaseModel):
@@ -74,6 +76,13 @@ class OptionsScannerRequestBody(BaseModel):
     target_dte_max: int | None = None
     top_n: int | None = None
     include_rejected: bool = False
+
+
+class ObservationRunRequest(BaseModel):
+    """Request body for manual paper observation run."""
+
+    manual_run: bool = True
+    allow_paper_trades: bool = False
 
 
 class PaperCloseRequest(BaseModel):
@@ -777,6 +786,30 @@ def journal_hygiene_production_preview(limit: int = Query(default=500, ge=1, le=
 def observation_readiness() -> dict:
     """Return readiness for long-running paper observation mode."""
     return ObservationReadinessChecker().check()
+
+
+@router.get("/observation/status")
+def observation_status() -> dict:
+    """Return paper observation status."""
+    return _paper_observation_engine.get_status()
+
+
+@router.post("/observation/run-once")
+def observation_run_once(request: ObservationRunRequest) -> dict:
+    """Run one paper-only observation pass."""
+    return _paper_observation_engine.run_once(manual_run=request.manual_run, allow_paper_trades=request.allow_paper_trades)
+
+
+@router.get("/observation/recent")
+def observation_recent(limit: int = Query(default=50, ge=1, le=500)) -> dict:
+    """Return recent observation runs."""
+    return _paper_observation_engine.get_recent_observations(limit=limit)
+
+
+@router.get("/observation/report")
+def observation_report(limit: int = Query(default=100, ge=1, le=500)) -> dict:
+    """Return observation report."""
+    return _paper_observation_engine.get_observation_report(limit=limit)
 
 
 @router.get("/diagnostics/smoke-test")

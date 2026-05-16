@@ -154,11 +154,22 @@ class Settings(BaseSettings):
     validation_timeframe_stock: str = Field(default="1d", alias="VALIDATION_TIMEFRAME_STOCK")
     validation_candle_limit: int = Field(default=250, ge=1, alias="VALIDATION_CANDLE_LIMIT")
     validation_require_safety_audit: bool = Field(default=True, alias="VALIDATION_REQUIRE_SAFETY_AUDIT")
+    paper_observation_enabled: bool = Field(default=False, alias="PAPER_OBSERVATION_ENABLED")
+    paper_observation_read_only: bool = Field(default=True, alias="PAPER_OBSERVATION_READ_ONLY")
+    paper_observation_allow_paper_trades: bool = Field(default=False, alias="PAPER_OBSERVATION_ALLOW_PAPER_TRADES")
+    paper_observation_symbols: list[str] = Field(default_factory=lambda: ["BTC/USD", "ETH/USD", "SOL/USD", "SUI/USD"], alias="PAPER_OBSERVATION_SYMBOLS")
+    paper_observation_timeframe: str = Field(default="1h", alias="PAPER_OBSERVATION_TIMEFRAME")
+    paper_observation_candle_limit: int = Field(default=250, ge=1, alias="PAPER_OBSERVATION_CANDLE_LIMIT")
+    paper_observation_min_seconds_between_runs: int = Field(default=300, ge=0, alias="PAPER_OBSERVATION_MIN_SECONDS_BETWEEN_RUNS")
+    paper_observation_max_symbols_per_run: int = Field(default=10, ge=1, alias="PAPER_OBSERVATION_MAX_SYMBOLS_PER_RUN")
+    paper_observation_require_readiness: bool = Field(default=True, alias="PAPER_OBSERVATION_REQUIRE_READINESS")
+    paper_observation_record_all_signals: bool = Field(default=True, alias="PAPER_OBSERVATION_RECORD_ALL_SIGNALS")
+    paper_observation_record_rejected_risk: bool = Field(default=True, alias="PAPER_OBSERVATION_RECORD_REJECTED_RISK")
     coinbase_api_key: str = Field(default="", alias="COINBASE_API_KEY")
     coinbase_api_secret: str = Field(default="", alias="COINBASE_API_SECRET")
     discord_webhook_url: str = Field(default="", alias="DISCORD_WEBHOOK_URL")
 
-    @field_validator("allowed_symbols", "phase14_smoke_symbols", "validation_symbols_crypto", mode="before")
+    @field_validator("allowed_symbols", "phase14_smoke_symbols", "validation_symbols_crypto", "paper_observation_symbols", mode="before")
     @classmethod
     def parse_allowed_symbols(cls, value: str | list[str]) -> list[str]:
         """Parse comma-delimited symbols from environment variables."""
@@ -216,6 +227,8 @@ class Settings(BaseSettings):
             raise ValueError("Email alerts are disabled in this phase")
         if not self.real_data_validation_read_only:
             raise ValueError("REAL_DATA_VALIDATION_READ_ONLY must remain true in this phase")
+        if not self.paper_observation_read_only:
+            raise ValueError("PAPER_OBSERVATION_READ_ONLY must remain true in this phase")
         return self
 
     def has_exchange_api_keys(self) -> bool:
