@@ -120,6 +120,21 @@ class Settings(BaseSettings):
     stock_hunter_options_max_dte: int = Field(default=90, ge=0, alias="STOCK_HUNTER_OPTIONS_MAX_DTE")
     stock_hunter_options_target_dte_min: int = Field(default=21, ge=0, alias="STOCK_HUNTER_OPTIONS_TARGET_DTE_MIN")
     stock_hunter_options_target_dte_max: int = Field(default=60, ge=0, alias="STOCK_HUNTER_OPTIONS_TARGET_DTE_MAX")
+    options_scanner_enabled: bool = Field(default=False, alias="OPTIONS_SCANNER_ENABLED")
+    options_scanner_read_only: bool = Field(default=True, alias="OPTIONS_SCANNER_READ_ONLY")
+    options_scanner_allow_execution: bool = Field(default=False, alias="OPTIONS_SCANNER_ALLOW_EXECUTION")
+    options_scanner_min_volume: int = Field(default=500, ge=0, alias="OPTIONS_SCANNER_MIN_VOLUME")
+    options_scanner_min_open_interest: int = Field(default=1000, ge=0, alias="OPTIONS_SCANNER_MIN_OPEN_INTEREST")
+    options_scanner_max_spread_pct: float = Field(default=8.0, ge=0, alias="OPTIONS_SCANNER_MAX_SPREAD_PCT")
+    options_scanner_target_delta_min: float = Field(default=0.50, ge=0, le=1, alias="OPTIONS_SCANNER_TARGET_DELTA_MIN")
+    options_scanner_target_delta_max: float = Field(default=0.60, ge=0, le=1, alias="OPTIONS_SCANNER_TARGET_DELTA_MAX")
+    options_scanner_min_dte: int = Field(default=14, ge=0, alias="OPTIONS_SCANNER_MIN_DTE")
+    options_scanner_max_dte: int = Field(default=90, ge=0, alias="OPTIONS_SCANNER_MAX_DTE")
+    options_scanner_target_dte_min: int = Field(default=21, ge=0, alias="OPTIONS_SCANNER_TARGET_DTE_MIN")
+    options_scanner_target_dte_max: int = Field(default=60, ge=0, alias="OPTIONS_SCANNER_TARGET_DTE_MAX")
+    options_scanner_max_iv_rank_warning: float = Field(default=70.0, ge=0, le=100, alias="OPTIONS_SCANNER_MAX_IV_RANK_WARNING")
+    options_scanner_min_underlying_score: int = Field(default=65, ge=0, le=100, alias="OPTIONS_SCANNER_MIN_UNDERLYING_SCORE")
+    options_scanner_top_n: int = Field(default=10, ge=1, alias="OPTIONS_SCANNER_TOP_N")
     coinbase_api_key: str = Field(default="", alias="COINBASE_API_KEY")
     coinbase_api_secret: str = Field(default="", alias="COINBASE_API_SECRET")
     discord_webhook_url: str = Field(default="", alias="DISCORD_WEBHOOK_URL")
@@ -168,6 +183,14 @@ class Settings(BaseSettings):
             raise ValueError("STOCK_HUNTER_OPTIONS_MIN_DTE cannot exceed STOCK_HUNTER_OPTIONS_MAX_DTE")
         if self.stock_hunter_options_target_dte_min > self.stock_hunter_options_target_dte_max:
             raise ValueError("STOCK_HUNTER_OPTIONS_TARGET_DTE_MIN cannot exceed STOCK_HUNTER_OPTIONS_TARGET_DTE_MAX")
+        if not self.options_scanner_read_only or self.options_scanner_allow_execution:
+            raise ValueError("Options scanner must remain read-only with execution disabled")
+        if self.options_scanner_target_delta_min > self.options_scanner_target_delta_max:
+            raise ValueError("OPTIONS_SCANNER_TARGET_DELTA_MIN cannot exceed OPTIONS_SCANNER_TARGET_DELTA_MAX")
+        if self.options_scanner_min_dte > self.options_scanner_max_dte:
+            raise ValueError("OPTIONS_SCANNER_MIN_DTE cannot exceed OPTIONS_SCANNER_MAX_DTE")
+        if self.options_scanner_target_dte_min > self.options_scanner_target_dte_max:
+            raise ValueError("OPTIONS_SCANNER_TARGET_DTE_MIN cannot exceed OPTIONS_SCANNER_TARGET_DTE_MAX")
         return self
 
     def has_exchange_api_keys(self) -> bool:

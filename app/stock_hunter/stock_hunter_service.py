@@ -6,6 +6,8 @@ from app.config import Settings, get_settings
 from app.connectors.moomoo.moomoo_market_data import MooMooMarketData
 from app.connectors.moomoo.moomoo_readonly_client import MooMooReadOnlyClient
 from app.stock_hunter.options_chain_analyzer import OptionsChainAnalyzer
+from app.stock_hunter.options_scanner import OptionsScanner
+from app.stock_hunter.options_strategy_models import OptionsScanRequest
 from app.stock_hunter.stock_scanner import StockScanner
 from app.stock_hunter.stock_signal_engine import StockSignalEngine
 from app.stock_hunter.stock_watchlist import StockWatchlist
@@ -21,6 +23,7 @@ class StockHunterService:
         moomoo_client: MooMooReadOnlyClient | None = None,
         market_data: MooMooMarketData | None = None,
         scanner: StockScanner | None = None,
+        options_scanner: OptionsScanner | None = None,
         options_analyzer: OptionsChainAnalyzer | None = None,
     ) -> None:
         """Initialize service."""
@@ -30,6 +33,7 @@ class StockHunterService:
         self.moomoo_client = moomoo_client or MooMooReadOnlyClient(settings=self.settings, market_data=self.market_data)
         self.options_analyzer = options_analyzer or OptionsChainAnalyzer(settings=self.settings)
         self.scanner = scanner or StockScanner(self.moomoo_client, StockSignalEngine(), self.options_analyzer)
+        self.options_scanner = options_scanner or OptionsScanner(settings=self.settings, moomoo_client=self.moomoo_client, analyzer=self.options_analyzer)
 
     def get_status(self) -> dict:
         """Return read-only service status."""
@@ -71,3 +75,15 @@ class StockHunterService:
             "execution_enabled": False,
             "source": "stock_hunter_top_candidates_v1",
         }
+
+    def options_scanner_status(self) -> dict:
+        """Return dedicated options scanner status."""
+        return self.options_scanner.status()
+
+    def scan_options(self, request: OptionsScanRequest) -> dict:
+        """Run dedicated read-only options scan."""
+        return self.options_scanner.scan(request).to_dict()
+
+    def top_options(self, limit: int | None = None) -> dict:
+        """Return top read-only option candidates from the default watchlist."""
+        return self.options_scanner.scan_watchlist(top_n=limit).to_dict()

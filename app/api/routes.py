@@ -32,6 +32,7 @@ from app.diagnostics.smoke_test_runner import SmokeTestRunner
 from app.exchanges.kraken_adapter import EmptyMarketDataError, InvalidSymbolError, KrakenRequestError, UnsupportedTimeframeError
 from app.storage.database import init_db
 from app.stock_hunter.stock_hunter_service import StockHunterService
+from app.stock_hunter.options_strategy_models import OptionsScanRequest
 from app.strategies.indicator_engine import IndicatorEngineError
 from app.strategies.signal_scoring import SignalScoringError
 
@@ -49,6 +50,24 @@ class PaperOrderRequest(BaseModel):
     quantity: float = Field(gt=0)
     market_price: float = Field(gt=0)
     reason: str | None = None
+
+
+class OptionsScannerRequestBody(BaseModel):
+    """Request body for read-only options scanner."""
+
+    symbols: list[str] = Field(default_factory=list)
+    option_type: str = "call"
+    min_volume: int | None = None
+    min_open_interest: int | None = None
+    max_spread_pct: float | None = None
+    delta_min: float | None = None
+    delta_max: float | None = None
+    min_dte: int | None = None
+    max_dte: int | None = None
+    target_dte_min: int | None = None
+    target_dte_max: int | None = None
+    top_n: int | None = None
+    include_rejected: bool = False
 
 
 class PaperCloseRequest(BaseModel):
@@ -696,3 +715,22 @@ def stock_hunter_analyze(symbol: str) -> dict:
 def stock_hunter_options(symbol: str) -> dict:
     """Analyze options chain research candidates without execution."""
     return StockHunterService(settings=get_settings()).analyze_options(symbol)
+
+
+@router.get("/options-scanner/status")
+def options_scanner_status() -> dict:
+    """Return dedicated read-only options scanner status."""
+    return StockHunterService(settings=get_settings()).options_scanner_status()
+
+
+@router.post("/options-scanner/scan")
+def options_scanner_scan(body: OptionsScannerRequestBody) -> dict:
+    """Run a read-only options scan without execution."""
+    request = OptionsScanRequest(**body.model_dump())
+    return StockHunterService(settings=get_settings()).scan_options(request)
+
+
+@router.get("/options-scanner/top")
+def options_scanner_top(limit: int = Query(default=10, ge=1, le=100)) -> dict:
+    """Return top read-only option candidates from the default watchlist."""
+    return StockHunterService(settings=get_settings()).top_options(limit=limit)

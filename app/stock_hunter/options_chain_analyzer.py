@@ -21,8 +21,7 @@ class OptionsChainAnalyzer:
         snapshots: list[OptionContractSnapshot] = []
         warnings: list[str] = []
         rejected = 0
-        for raw in contracts:
-            snapshot = self._snapshot(underlying, raw)
+        for snapshot in self.normalize_contracts(underlying, contracts):
             if snapshot.candidate_label == "REJECTED":
                 rejected += 1
             else:
@@ -49,6 +48,10 @@ class OptionsChainAnalyzer:
             rejected_contracts_count=rejected,
             warnings=warnings,
         )
+
+    def normalize_contracts(self, underlying: str, contracts: list[dict]) -> list[OptionContractSnapshot]:
+        """Return scored contract snapshots, including rejected contracts."""
+        return [self._snapshot(underlying, raw) for raw in contracts]
 
     def _snapshot(self, underlying: str, raw: dict) -> OptionContractSnapshot:
         """Convert raw contract data into a scored snapshot."""

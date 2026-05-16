@@ -4,7 +4,7 @@ Crypto Hunter is a backend trading engine for a sophisticated crypto trading bot
 
 ## Current Phase
 
-Phase 18 Stock/Options Hunter signal refinement:
+Phase 19 dedicated options scanner:
 
 - Clean Python backend project
 - FastAPI health and status endpoints
@@ -35,6 +35,7 @@ Phase 18 Stock/Options Hunter signal refinement:
 - Stock/Options Hunter read-only skeleton with watchlist, stock signal placeholder, options-chain analyzer, scanner, and service endpoints
 - MooMoo read-only quote, candle, market-state, and option-chain adapter with Stock Hunter integration
 - Refined Stock/Options Hunter signal engine with component scoring, RSI/EMA/MACD momentum logic, options liquidity scoring, DTE filters, and scanner ranking
+- Dedicated read-only options scanner with best-contract ranking across symbols
 
 Live trading and real exchange order execution are not implemented yet.
 
@@ -500,6 +501,38 @@ New endpoint:
 
 MooMoo remains read-only. Options execution is not implemented. Kraken live trading remains disabled.
 
+## Phase 19 Options Scanner
+
+Phase 19 adds a dedicated read-only options scanner and best-contract ranking layer for Stock/Options Hunter.
+
+Docs:
+
+- [Options Scanner Phase 19](docs/OPTIONS_SCANNER_PHASE19.md)
+
+Default filters:
+
+- Volume >= 500
+- Open interest >= 1000
+- Bid/ask spread <= 8%
+- Target delta 0.50 to 0.60
+- DTE 14 to 90, preferred 21 to 60
+
+Ranking formula:
+
+- Liquidity score: 30%
+- Contract score: 30%
+- Underlying stock score: 25%
+- DTE quality: 10%
+- Spread quality: 5%
+
+Endpoints:
+
+- `GET /options-scanner/status`
+- `POST /options-scanner/scan`
+- `GET /options-scanner/top`
+
+MooMoo remains read-only. Options execution is not implemented. Kraken live trading remains disabled.
+
 ## Safety Defaults
 
 The default configuration is intentionally conservative:
@@ -508,7 +541,7 @@ The default configuration is intentionally conservative:
 - `ENABLE_LIVE_TRADING=false`
 - `REQUIRE_LIVE_CONFIRMATION=true`
 - `LiveBroker` refuses orders unless every live safety condition passes
-- `ExecutionGuard` always reports live execution unavailable in Phase 18
+- `ExecutionGuard` always reports live execution unavailable in Phase 19
 - `SafetyAudit` must pass before future execution work
 - Exchange API secrets are never returned by API routes
 - No withdrawal functionality exists in this repository
@@ -711,6 +744,14 @@ Phase 18 details:
 - Options analysis now includes DTE rules, liquidity scores, contract scores, and research-only candidate labels.
 - Scanner results are ranked by read-only opportunity score.
 
+Options scanner examples:
+
+```powershell
+Invoke-RestMethod -Uri "http://127.0.0.1:8000/options-scanner/status"
+Invoke-RestMethod -Method Post -Uri "http://127.0.0.1:8000/options-scanner/scan" -ContentType "application/json" -Body '{"symbols":["AAPL","MSFT","NVDA"],"option_type":"call","top_n":10,"include_rejected":false}'
+Invoke-RestMethod -Uri "http://127.0.0.1:8000/options-scanner/top"
+```
+
 ## Run Tests
 
 ```powershell
@@ -719,4 +760,4 @@ Phase 18 details:
 
 ## Live Trading Warning
 
-Live trading is locked down and not implemented in Phase 18. Kraken private access is read-only account data only. MooMoo is read-only market data only. Stock/Options Hunter is read-only scanner/research only. Real order placement, live sell execution, live cancel execution, withdrawals, transfers, funding, staking, margin trading, options execution, and Coinbase integration are not implemented in this phase. Reporting, system, diagnostics, MooMoo, and Stock/Options Hunter endpoints do not perform real exchange execution. Dry-run execution is only a preview, and paper/backtest/smoke-test/scanner results do not guarantee live performance.
+Live trading is locked down and not implemented in Phase 19. Kraken private access is read-only account data only. MooMoo is read-only market data only. Stock/Options Hunter and Options Scanner are read-only scanner/research only. Real order placement, live sell execution, live cancel execution, withdrawals, transfers, funding, staking, margin trading, options execution, and Coinbase integration are not implemented in this phase. Reporting, system, diagnostics, MooMoo, Stock/Options Hunter, and Options Scanner endpoints do not perform real exchange execution. Dry-run execution is only a preview, and paper/backtest/smoke-test/scanner results do not guarantee live performance.
