@@ -4,7 +4,7 @@ Crypto Hunter is a backend trading engine for a sophisticated crypto trading bot
 
 ## Current Phase
 
-Phase 13 safety audit and integration hardening:
+Phase 14 local smoke testing and calibration diagnostics:
 
 - Clean Python backend project
 - FastAPI health and status endpoints
@@ -27,6 +27,8 @@ Phase 13 safety audit and integration hardening:
 - Order-intent validation, dry-run execution previews, execution safety gates, and emergency controls
 - Centralized dependency wiring for shared runtime services
 - Runtime, dependency, and safety-audit system endpoints
+- Local smoke-test runner for public Kraken data, indicators, signals, paper bot checks, journal checks, and reporting checks
+- Signal calibration report helpers that diagnose strictness without changing thresholds
 
 Live trading and real exchange order execution are not implemented yet.
 
@@ -319,6 +321,44 @@ Before any future live-trading phase, this checklist should be true:
 - Kraken keys use read/query permissions until a future live phase explicitly changes that
 - no withdrawal permissions are enabled
 
+## Phase 14 Smoke Test And Calibration
+
+Phase 14 adds diagnostics for checking the local backend end-to-end while keeping live trading disabled. The smoke test uses public market data where available, verifies indicators and signals, checks risk evaluation, confirms the paper bot can start manually, records a journal event, and reads the dashboard report. It does not place real orders.
+
+Defaults:
+
+- `PHASE14_SMOKE_SYMBOLS=BTC/USD,ETH/USD,SOL/USD,SUI/USD`
+- `PHASE14_TIMEFRAME=1h`
+- `PHASE14_CANDLE_LIMIT=250`
+- `PHASE14_ALLOW_PAPER_SCAN=false`
+
+Run the local smoke script:
+
+```powershell
+cd "C:\Users\brock\Documents\New project 2\crypto-hunter-bot"
+.\.venv\Scripts\python.exe scripts\smoke_test_phase14.py
+```
+
+Run the API and diagnostics endpoints:
+
+```powershell
+.\.venv\Scripts\python.exe -m uvicorn app.main:app --reload
+Invoke-RestMethod -Uri "http://127.0.0.1:8000/diagnostics/smoke-test"
+Invoke-RestMethod -Uri "http://127.0.0.1:8000/diagnostics/calibration-report"
+```
+
+Calibration status meanings:
+
+- `NORMAL`: signal scoring appears reasonable for the checked market snapshot
+- `TOO_STRICT`: synthetic/test bullish conditions cannot reach `BUY_WATCH` or `STRONG_BUY`
+- `TOO_LOOSE`: bullish signals appear despite elevated risk context
+- `BLOCKED`: signals are limited by explicit blockers
+- `DATA_UNAVAILABLE`: candles or signals could not be generated
+
+Phase 14 does not auto-change thresholds. It only reports what it sees.
+
+Next recommended phase: review Phase 14 smoke/calibration output over several market sessions, then add more paper-only monitoring or alerting before considering any future live-trading design.
+
 ## Safety Defaults
 
 The default configuration is intentionally conservative:
@@ -395,6 +435,8 @@ Then open:
 - `http://127.0.0.1:8000/system/runtime`
 - `http://127.0.0.1:8000/system/dependencies`
 - `http://127.0.0.1:8000/system/safety-audit`
+- `http://127.0.0.1:8000/diagnostics/smoke-test`
+- `http://127.0.0.1:8000/diagnostics/calibration-report`
 
 Use `BTC-USD` in path parameters because raw `BTC/USD` contains a slash and is not path-safe. The API converts `BTC-USD` to `BTC/USD` internally.
 
@@ -481,6 +523,13 @@ Invoke-RestMethod -Uri "http://127.0.0.1:8000/system/dependencies"
 Invoke-RestMethod -Uri "http://127.0.0.1:8000/system/safety-audit"
 ```
 
+Diagnostics examples:
+
+```powershell
+Invoke-RestMethod -Uri "http://127.0.0.1:8000/diagnostics/smoke-test"
+Invoke-RestMethod -Uri "http://127.0.0.1:8000/diagnostics/calibration-report"
+```
+
 ## Run Tests
 
 ```powershell
@@ -489,4 +538,4 @@ Invoke-RestMethod -Uri "http://127.0.0.1:8000/system/safety-audit"
 
 ## Live Trading Warning
 
-Live trading is locked down and not implemented in Phase 13. Kraken private access is read-only account data only. Real order placement, live sell execution, live cancel execution, withdrawals, transfers, and Coinbase integration are not implemented in this phase. Reporting and system endpoints are read-only, dry-run execution is only a preview, and paper/backtest results do not guarantee live performance.
+Live trading is locked down and not implemented in Phase 14. Kraken private access is read-only account data only. Real order placement, live sell execution, live cancel execution, withdrawals, transfers, and Coinbase integration are not implemented in this phase. Reporting, system, and diagnostics endpoints do not perform real exchange execution. Dry-run execution is only a preview, and paper/backtest/smoke-test results do not guarantee live performance.

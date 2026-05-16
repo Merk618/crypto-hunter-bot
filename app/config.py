@@ -84,11 +84,15 @@ class Settings(BaseSettings):
     emergency_cancel_enabled: bool = Field(default=False, alias="EMERGENCY_CANCEL_ENABLED")
     dead_man_switch_enabled: bool = Field(default=False, alias="DEAD_MAN_SWITCH_ENABLED")
     dead_man_switch_timeout_seconds: int = Field(default=60, ge=0, alias="DEAD_MAN_SWITCH_TIMEOUT_SECONDS")
+    phase14_smoke_symbols: list[str] = Field(default_factory=lambda: ["BTC/USD", "ETH/USD", "SOL/USD", "SUI/USD"], alias="PHASE14_SMOKE_SYMBOLS")
+    phase14_timeframe: str = Field(default="1h", alias="PHASE14_TIMEFRAME")
+    phase14_candle_limit: int = Field(default=250, ge=200, alias="PHASE14_CANDLE_LIMIT")
+    phase14_allow_paper_scan: bool = Field(default=False, alias="PHASE14_ALLOW_PAPER_SCAN")
     coinbase_api_key: str = Field(default="", alias="COINBASE_API_KEY")
     coinbase_api_secret: str = Field(default="", alias="COINBASE_API_SECRET")
     discord_webhook_url: str = Field(default="", alias="DISCORD_WEBHOOK_URL")
 
-    @field_validator("allowed_symbols", mode="before")
+    @field_validator("allowed_symbols", "phase14_smoke_symbols", mode="before")
     @classmethod
     def parse_allowed_symbols(cls, value: str | list[str]) -> list[str]:
         """Parse comma-delimited symbols from environment variables."""

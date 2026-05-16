@@ -24,6 +24,8 @@ from app.core.dependencies import (
     get_trade_journal,
 )
 from app.core.safety_audit import SafetyAudit
+from app.diagnostics.calibration_report import CalibrationReport
+from app.diagnostics.smoke_test_runner import SmokeTestRunner
 from app.exchanges.kraken_adapter import EmptyMarketDataError, InvalidSymbolError, KrakenRequestError, UnsupportedTimeframeError
 from app.storage.database import init_db
 from app.strategies.indicator_engine import IndicatorEngineError
@@ -598,3 +600,15 @@ def system_dependencies() -> dict:
 def system_safety_audit() -> dict:
     """Run a read-only safety audit."""
     return SafetyAudit(settings=get_settings()).run().to_dict()
+
+
+@router.get("/diagnostics/smoke-test")
+def diagnostics_smoke_test() -> dict:
+    """Run the Phase 14 safe local smoke test."""
+    return SmokeTestRunner(settings=get_settings()).run()
+
+
+@router.get("/diagnostics/calibration-report")
+def diagnostics_calibration_report() -> dict:
+    """Return a Phase 14 signal calibration report."""
+    return CalibrationReport(settings=get_settings()).analyze_symbols()
