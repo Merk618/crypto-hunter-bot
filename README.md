@@ -4,7 +4,7 @@ Crypto Hunter is a backend trading engine for a sophisticated crypto trading bot
 
 ## Current Phase
 
-Phase 14 local smoke testing and calibration diagnostics:
+Phase 15 MooMoo read-only feasibility and Stock/Options Hunter planning:
 
 - Clean Python backend project
 - FastAPI health and status endpoints
@@ -29,6 +29,9 @@ Phase 14 local smoke testing and calibration diagnostics:
 - Runtime, dependency, and safety-audit system endpoints
 - Local smoke-test runner for public Kraken data, indicators, signals, paper bot checks, journal checks, and reporting checks
 - Signal calibration report helpers that diagnose strictness without changing thresholds
+- Phase 15 local validation checklist and strategy calibration guidance
+- MooMoo connector planning as a separate future Stock/Options Hunter module, not part of the Crypto Hunter core
+- MooMoo read-only feasibility layer for package/OpenD health and future capability reporting
 
 Live trading and real exchange order execution are not implemented yet.
 
@@ -359,6 +362,60 @@ Phase 14 does not auto-change thresholds. It only reports what it sees.
 
 Next recommended phase: review Phase 14 smoke/calibration output over several market sessions, then add more paper-only monitoring or alerting before considering any future live-trading design.
 
+## Phase 15 MooMoo Read-Only Feasibility
+
+Phase 15 adds documentation for validating Kraken public-data behavior locally and a read-only MooMoo feasibility layer for the broader YucaTanaTrades ecosystem. MooMoo remains separate from the Crypto Hunter core.
+
+Docs:
+
+- [Phase 15 Local Validation](docs/PHASE15_LOCAL_VALIDATION.md)
+- [Strategy Calibration Notes](docs/STRATEGY_CALIBRATION.md)
+- [MooMoo API And OpenD Setup](docs/MOOMOO_API_SKILLS_SETUP.md)
+- [Stock/Options Hunter Plan](docs/STOCK_OPTIONS_HUNTER_PLAN.md)
+- [MooMoo Connector Plan](docs/MOOMOO_CONNECTOR_PLAN.md)
+- [Connector Boundaries](docs/CONNECTOR_BOUNDARIES.md)
+
+MooMoo is planned as part of a separate future Stock/Options Hunter module. Phase 15 does not install `moomoo-api`, does not require OpenD to be running, and does not unlock trading.
+
+MooMoo defaults:
+
+- `MOOMOO_ENABLED=false`
+- `MOOMOO_OPEND_HOST=127.0.0.1`
+- `MOOMOO_OPEND_PORT=11111`
+- `MOOMOO_READ_ONLY=true`
+- `MOOMOO_TRADING_ENABLED=false`
+- `MOOMOO_PAPER_TRADING_ENABLED=false`
+- `MOOMOO_UNLOCK_TRADE_CONTEXT=false`
+- `MOOMOO_MARKET_REGION=US`
+
+Target separation:
+
+- Crypto Hunter: Kraken/Coinbase crypto exchange adapters and crypto strategy/risk systems
+- Stock/Options Hunter: future MooMoo read-only market data, stock/ETF/options scanners, and paper simulation
+- YucaTanaTrades Terminal: future dashboard that can read from both systems
+
+Phase 15 does not change signal thresholds. Use the calibration notes to review multiple market sessions before making any scoring changes.
+
+MooMoo endpoints:
+
+- `GET /moomoo/status`
+- `GET /moomoo/health`
+- `GET /moomoo/capabilities`
+
+OpenD setup notes:
+
+- OpenD must be installed separately.
+- OpenD must be running and logged in before socket connectivity can pass.
+- The default OpenD port is `11111`.
+- Python import check after optional local install:
+
+```powershell
+.\.venv\Scripts\python.exe -m pip install moomoo-api --upgrade
+.\.venv\Scripts\python.exe -c "from moomoo import *; print('MooMoo API import OK')"
+```
+
+MooMoo trading remains disabled. Kraken live trading remains disabled.
+
 ## Safety Defaults
 
 The default configuration is intentionally conservative:
@@ -367,7 +424,7 @@ The default configuration is intentionally conservative:
 - `ENABLE_LIVE_TRADING=false`
 - `REQUIRE_LIVE_CONFIRMATION=true`
 - `LiveBroker` refuses orders unless every live safety condition passes
-- `ExecutionGuard` always reports live execution unavailable in Phase 13
+- `ExecutionGuard` always reports live execution unavailable in Phase 15
 - `SafetyAudit` must pass before future execution work
 - Exchange API secrets are never returned by API routes
 - No withdrawal functionality exists in this repository
@@ -437,6 +494,9 @@ Then open:
 - `http://127.0.0.1:8000/system/safety-audit`
 - `http://127.0.0.1:8000/diagnostics/smoke-test`
 - `http://127.0.0.1:8000/diagnostics/calibration-report`
+- `http://127.0.0.1:8000/moomoo/status`
+- `http://127.0.0.1:8000/moomoo/health`
+- `http://127.0.0.1:8000/moomoo/capabilities`
 
 Use `BTC-USD` in path parameters because raw `BTC/USD` contains a slash and is not path-safe. The API converts `BTC-USD` to `BTC/USD` internally.
 
@@ -530,6 +590,14 @@ Invoke-RestMethod -Uri "http://127.0.0.1:8000/diagnostics/smoke-test"
 Invoke-RestMethod -Uri "http://127.0.0.1:8000/diagnostics/calibration-report"
 ```
 
+MooMoo read-only feasibility examples:
+
+```powershell
+Invoke-RestMethod -Uri "http://127.0.0.1:8000/moomoo/status"
+Invoke-RestMethod -Uri "http://127.0.0.1:8000/moomoo/health"
+Invoke-RestMethod -Uri "http://127.0.0.1:8000/moomoo/capabilities"
+```
+
 ## Run Tests
 
 ```powershell
@@ -538,4 +606,4 @@ Invoke-RestMethod -Uri "http://127.0.0.1:8000/diagnostics/calibration-report"
 
 ## Live Trading Warning
 
-Live trading is locked down and not implemented in Phase 14. Kraken private access is read-only account data only. Real order placement, live sell execution, live cancel execution, withdrawals, transfers, and Coinbase integration are not implemented in this phase. Reporting, system, and diagnostics endpoints do not perform real exchange execution. Dry-run execution is only a preview, and paper/backtest/smoke-test results do not guarantee live performance.
+Live trading is locked down and not implemented in Phase 15. Kraken private access is read-only account data only. MooMoo is read-only feasibility only. Real order placement, live sell execution, live cancel execution, withdrawals, transfers, funding, staking, margin trading, options execution, and Coinbase integration are not implemented in this phase. Reporting, system, diagnostics, and MooMoo endpoints do not perform real exchange execution. Dry-run execution is only a preview, and paper/backtest/smoke-test results do not guarantee live performance.

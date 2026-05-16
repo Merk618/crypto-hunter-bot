@@ -6,6 +6,8 @@ from pydantic import BaseModel, Field
 from app.bot.paper_trading_bot import PaperTradingBotError
 from app.backtesting.backtest_engine import BacktestDataError, BacktestEngine
 from app.config import get_settings
+from app.connectors.moomoo.moomoo_config import get_moomoo_config
+from app.connectors.moomoo.moomoo_readonly_client import MooMooReadOnlyClient
 from app.execution.order_intent import OrderIntent
 from app.core.app_state import AppState
 from app.core.dependencies import (
@@ -612,3 +614,29 @@ def diagnostics_smoke_test() -> dict:
 def diagnostics_calibration_report() -> dict:
     """Return a Phase 14 signal calibration report."""
     return CalibrationReport(settings=get_settings()).analyze_symbols()
+
+
+@router.get("/moomoo/status")
+def moomoo_status() -> dict:
+    """Return safe MooMoo connector status without secrets."""
+    config = get_moomoo_config(get_settings()).to_dict()
+    health = MooMooReadOnlyClient(settings=get_settings()).get_health().to_dict()
+    return {
+        "config": config,
+        "health": health,
+        "trading_enabled": False,
+        "read_only": config["read_only"],
+        "source": "moomoo_readonly_status_v1",
+    }
+
+
+@router.get("/moomoo/health")
+def moomoo_health() -> dict:
+    """Return MooMoo import/OpenD health without unlocking trading."""
+    return MooMooReadOnlyClient(settings=get_settings()).get_health().to_dict()
+
+
+@router.get("/moomoo/capabilities")
+def moomoo_capabilities() -> dict:
+    """Return planned MooMoo read-only capabilities."""
+    return MooMooReadOnlyClient(settings=get_settings()).get_supported_capabilities().to_dict()

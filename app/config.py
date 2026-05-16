@@ -88,6 +88,15 @@ class Settings(BaseSettings):
     phase14_timeframe: str = Field(default="1h", alias="PHASE14_TIMEFRAME")
     phase14_candle_limit: int = Field(default=250, ge=200, alias="PHASE14_CANDLE_LIMIT")
     phase14_allow_paper_scan: bool = Field(default=False, alias="PHASE14_ALLOW_PAPER_SCAN")
+    moomoo_enabled: bool = Field(default=False, alias="MOOMOO_ENABLED")
+    moomoo_opend_host: str = Field(default="127.0.0.1", alias="MOOMOO_OPEND_HOST")
+    moomoo_opend_port: int = Field(default=11111, gt=0, le=65535, alias="MOOMOO_OPEND_PORT")
+    moomoo_read_only: bool = Field(default=True, alias="MOOMOO_READ_ONLY")
+    moomoo_trading_enabled: bool = Field(default=False, alias="MOOMOO_TRADING_ENABLED")
+    moomoo_paper_trading_enabled: bool = Field(default=False, alias="MOOMOO_PAPER_TRADING_ENABLED")
+    moomoo_unlock_trade_context: bool = Field(default=False, alias="MOOMOO_UNLOCK_TRADE_CONTEXT")
+    moomoo_account_id: str = Field(default="", alias="MOOMOO_ACCOUNT_ID")
+    moomoo_market_region: str = Field(default="US", alias="MOOMOO_MARKET_REGION")
     coinbase_api_key: str = Field(default="", alias="COINBASE_API_KEY")
     coinbase_api_secret: str = Field(default="", alias="COINBASE_API_SECRET")
     discord_webhook_url: str = Field(default="", alias="DISCORD_WEBHOOK_URL")
@@ -114,6 +123,10 @@ class Settings(BaseSettings):
         """Fail safely when live mode is partially enabled."""
         if self.bot_mode != BotMode.LIVE and self.enable_live_trading:
             raise ValueError("ENABLE_LIVE_TRADING can only be true when BOT_MODE=live")
+        if self.moomoo_trading_enabled or self.moomoo_paper_trading_enabled or self.moomoo_unlock_trade_context:
+            raise ValueError("MooMoo trading, paper trading, and trade-context unlock are disabled in this phase")
+        if not self.moomoo_read_only:
+            raise ValueError("MOOMOO_READ_ONLY must remain true in this phase")
         return self
 
     def has_exchange_api_keys(self) -> bool:
