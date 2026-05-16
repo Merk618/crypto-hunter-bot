@@ -4,7 +4,7 @@ Crypto Hunter is a backend trading engine for a sophisticated crypto trading bot
 
 ## Current Phase
 
-Phase 24 paper observation mode:
+Phase 25 strategy calibration from paper observation:
 
 - Clean Python backend project
 - FastAPI health and status endpoints
@@ -41,6 +41,7 @@ Phase 24 paper observation mode:
 - Read-only real-data validation helpers, scripts, and local Windows runbook for Kraken public data and optional MooMoo/OpenD checks
 - Production-style report filtering, journal hygiene previews, deduped daily briefings, and paper-observation readiness checks
 - Manual paper observation mode for Kraken public data, signal generation, risk evaluation, observation logs, and observation reports
+- Read-only strategy calibration reports from paper observation results, including EMA 200 blocker analysis, low-score bottleneck detection, and threshold recommendations that cannot auto-apply
 
 Live trading and real exchange order execution are not implemented yet. Crypto Hunter remains standalone-first; YucaTanaTrades frontend integration comes later after local reliability is proven.
 
@@ -657,6 +658,32 @@ Invoke-RestMethod -Method Post -Uri "http://127.0.0.1:8000/observation/run-once"
 
 Paper trades are disabled by default. Even when explicitly enabled later, observation mode can only use the paper broker.
 
+## Phase 25 Strategy Calibration
+
+Phase 25 analyzes paper observation results and recommends calibration review items without changing strategy thresholds.
+
+Docs:
+
+- [Strategy Calibration Phase 25](docs/STRATEGY_CALIBRATION_PHASE25.md)
+
+Calibration endpoints:
+
+- `GET /calibration/status`
+- `GET /calibration/report`
+- `GET /calibration/symbol/{symbol}`
+- `GET /calibration/recommendations`
+
+Examples:
+
+```powershell
+Invoke-RestMethod -Uri "http://127.0.0.1:8000/calibration/status"
+Invoke-RestMethod -Uri "http://127.0.0.1:8000/calibration/report"
+Invoke-RestMethod -Uri "http://127.0.0.1:8000/calibration/symbol/BTC-USD"
+Invoke-RestMethod -Uri "http://127.0.0.1:8000/calibration/recommendations"
+```
+
+Calibration is read-only. `CALIBRATION_ALLOW_AUTO_APPLY=false` by default, and Phase 25 does not lower `MIN_SIGNAL_SCORE_TO_TRADE`, loosen risk rules, or modify strategy code. The next recommended phase is a longer paper observation window before any manual threshold review.
+
 ## Safety Defaults
 
 The default configuration is intentionally conservative:
@@ -665,7 +692,7 @@ The default configuration is intentionally conservative:
 - `ENABLE_LIVE_TRADING=false`
 - `REQUIRE_LIVE_CONFIRMATION=true`
 - `LiveBroker` refuses orders unless every live safety condition passes
-- `ExecutionGuard` always reports live execution unavailable in Phase 24
+- `ExecutionGuard` always reports live execution unavailable in Phase 25
 - `SafetyAudit` must pass before future execution work
 - Exchange API secrets are never returned by API routes
 - No withdrawal functionality exists in this repository
@@ -933,6 +960,14 @@ Invoke-RestMethod -Uri "http://127.0.0.1:8000/observation/recent"
 Invoke-RestMethod -Uri "http://127.0.0.1:8000/observation/report"
 ```
 
+Calibration examples:
+
+```powershell
+Invoke-RestMethod -Uri "http://127.0.0.1:8000/calibration/status"
+Invoke-RestMethod -Uri "http://127.0.0.1:8000/calibration/report"
+Invoke-RestMethod -Uri "http://127.0.0.1:8000/calibration/recommendations"
+```
+
 ## Run Tests
 
 ```powershell
@@ -941,4 +976,4 @@ Invoke-RestMethod -Uri "http://127.0.0.1:8000/observation/report"
 
 ## Live Trading Warning
 
-Live trading is locked down and not implemented in Phase 24. Kraken private access is read-only account data only. MooMoo is read-only market data only. Stock/Options Hunter, Options Scanner, alerts, unified reports, operator tooling, validation tooling, journal hygiene, observation readiness, and paper observation are read-only or paper-only scanner/research/reporting/status/checking modes. Real order placement, live sell execution, live cancel execution, withdrawals, transfers, funding, staking, margin trading, options execution, external alert delivery, and Coinbase integration are not implemented in this phase. Reporting, alerts, operator, validation, journal hygiene, observation, system, diagnostics, MooMoo, Stock/Options Hunter, and Options Scanner endpoints do not perform real exchange execution. Dry-run execution is only a preview, and paper/backtest/smoke-test/scanner/reporting/validation/observation results do not guarantee live performance.
+Live trading is locked down and not implemented in Phase 25. Kraken private access is read-only account data only. MooMoo is read-only market data only. Stock/Options Hunter, Options Scanner, alerts, unified reports, operator tooling, validation tooling, journal hygiene, observation readiness, paper observation, and calibration are read-only or paper-only scanner/research/reporting/status/checking modes. Real order placement, live sell execution, live cancel execution, withdrawals, transfers, funding, staking, margin trading, options execution, external alert delivery, and Coinbase integration are not implemented in this phase. Reporting, alerts, operator, validation, journal hygiene, observation, calibration, system, diagnostics, MooMoo, Stock/Options Hunter, and Options Scanner endpoints do not perform real exchange execution. Dry-run execution is only a preview, and paper/backtest/smoke-test/scanner/reporting/validation/observation/calibration results do not guarantee live performance.

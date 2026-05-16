@@ -6,6 +6,7 @@ from pydantic import BaseModel, Field
 from app.bot.paper_trading_bot import PaperTradingBotError
 from app.alerts.alert_service import AlertService
 from app.backtesting.backtest_engine import BacktestDataError, BacktestEngine
+from app.calibration.strategy_calibration_report import StrategyCalibrationReportBuilder
 from app.config import get_settings
 from app.connectors.moomoo.moomoo_config import get_moomoo_config
 from app.connectors.moomoo.moomoo_market_data import MooMooMarketData
@@ -810,6 +811,45 @@ def observation_recent(limit: int = Query(default=50, ge=1, le=500)) -> dict:
 def observation_report(limit: int = Query(default=100, ge=1, le=500)) -> dict:
     """Return observation report."""
     return _paper_observation_engine.get_observation_report(limit=limit)
+
+
+@router.get("/calibration/status")
+def calibration_status() -> dict:
+    """Return read-only strategy calibration status."""
+    settings = get_settings()
+    return {
+        "enabled": settings.calibration_enabled,
+        "read_only": settings.calibration_read_only,
+        "auto_apply_allowed": settings.calibration_allow_auto_apply,
+        "min_observation_runs": settings.calibration_min_observation_runs,
+        "min_sample_size_for_changes": settings.calibration_min_sample_size_for_changes,
+        "recent_observation_runs": len(_paper_observation_engine.recent_runs),
+        "source": "crypto_hunter_calibration_status_v1",
+    }
+
+
+@router.get("/calibration/report")
+def calibration_report() -> dict:
+    """Return read-only strategy calibration report."""
+    return StrategyCalibrationReportBuilder(settings=get_settings()).build(_paper_observation_engine.recent_runs)
+
+
+@router.get("/calibration/symbol/{symbol}")
+def calibration_symbol(symbol: str) -> dict:
+    """Return read-only strategy calibration summary for one symbol."""
+    return StrategyCalibrationReportBuilder(settings=get_settings()).build_for_symbol(symbol, _paper_observation_engine.recent_runs)
+
+
+@router.get("/calibration/recommendations")
+def calibration_recommendations() -> dict:
+    """Return read-only strategy threshold recommendations."""
+    report = StrategyCalibrationReportBuilder(settings=get_settings()).build(_paper_observation_engine.recent_runs)
+    return {
+        "threshold_recommendations": report["threshold_recommendations"],
+        "findings": report["findings"],
+        "auto_apply_allowed": False,
+        "source": "crypto_hunter_calibration_recommendations_v1",
+    }
 
 
 @router.get("/diagnostics/smoke-test")

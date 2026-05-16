@@ -165,6 +165,13 @@ class Settings(BaseSettings):
     paper_observation_require_readiness: bool = Field(default=True, alias="PAPER_OBSERVATION_REQUIRE_READINESS")
     paper_observation_record_all_signals: bool = Field(default=True, alias="PAPER_OBSERVATION_RECORD_ALL_SIGNALS")
     paper_observation_record_rejected_risk: bool = Field(default=True, alias="PAPER_OBSERVATION_RECORD_REJECTED_RISK")
+    calibration_enabled: bool = Field(default=True, alias="CALIBRATION_ENABLED")
+    calibration_read_only: bool = Field(default=True, alias="CALIBRATION_READ_ONLY")
+    calibration_min_observation_runs: int = Field(default=1, ge=1, alias="CALIBRATION_MIN_OBSERVATION_RUNS")
+    calibration_warn_ema200_blocker_rate: float = Field(default=0.75, ge=0, le=1, alias="CALIBRATION_WARN_EMA200_BLOCKER_RATE")
+    calibration_warn_low_score_rate: float = Field(default=0.75, ge=0, le=1, alias="CALIBRATION_WARN_LOW_SCORE_RATE")
+    calibration_min_sample_size_for_changes: int = Field(default=20, ge=1, alias="CALIBRATION_MIN_SAMPLE_SIZE_FOR_CHANGES")
+    calibration_allow_auto_apply: bool = Field(default=False, alias="CALIBRATION_ALLOW_AUTO_APPLY")
     coinbase_api_key: str = Field(default="", alias="COINBASE_API_KEY")
     coinbase_api_secret: str = Field(default="", alias="COINBASE_API_SECRET")
     discord_webhook_url: str = Field(default="", alias="DISCORD_WEBHOOK_URL")
@@ -229,6 +236,8 @@ class Settings(BaseSettings):
             raise ValueError("REAL_DATA_VALIDATION_READ_ONLY must remain true in this phase")
         if not self.paper_observation_read_only:
             raise ValueError("PAPER_OBSERVATION_READ_ONLY must remain true in this phase")
+        if not self.calibration_read_only or self.calibration_allow_auto_apply:
+            raise ValueError("Calibration must remain read-only and auto-apply disabled")
         return self
 
     def has_exchange_api_keys(self) -> bool:
