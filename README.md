@@ -4,7 +4,7 @@ Crypto Hunter is a backend trading engine for a sophisticated crypto trading bot
 
 ## Current Phase
 
-Phase 15 MooMoo read-only feasibility and Stock/Options Hunter planning:
+Phase 16 Stock/Options Hunter read-only skeleton:
 
 - Clean Python backend project
 - FastAPI health and status endpoints
@@ -32,6 +32,7 @@ Phase 15 MooMoo read-only feasibility and Stock/Options Hunter planning:
 - Phase 15 local validation checklist and strategy calibration guidance
 - MooMoo connector planning as a separate future Stock/Options Hunter module, not part of the Crypto Hunter core
 - MooMoo read-only feasibility layer for package/OpenD health and future capability reporting
+- Stock/Options Hunter read-only skeleton with watchlist, stock signal placeholder, options-chain analyzer, scanner, and service endpoints
 
 Live trading and real exchange order execution are not implemented yet.
 
@@ -416,6 +417,39 @@ OpenD setup notes:
 
 MooMoo trading remains disabled. Kraken live trading remains disabled.
 
+## Phase 16 Stock/Options Hunter Skeleton
+
+Phase 16 adds a separate read-only Stock/Options Hunter skeleton. It is not part of Crypto Hunter's Kraken execution path.
+
+Docs:
+
+- [Stock/Options Hunter Phase 16](docs/STOCK_OPTIONS_HUNTER_PHASE16.md)
+- [Stock/Options Hunter Plan](docs/STOCK_OPTIONS_HUNTER_PLAN.md)
+- [Connector Boundaries](docs/CONNECTOR_BOUNDARIES.md)
+
+Defaults:
+
+- `STOCK_HUNTER_ENABLED=false`
+- `STOCK_HUNTER_DEFAULT_SYMBOLS=AAPL,MSFT,NVDA,META,AMZN,GOOGL,TSLA`
+- `STOCK_HUNTER_ENABLE_OPTIONS_ANALYSIS=true`
+- `STOCK_HUNTER_MIN_OPTION_VOLUME=500`
+- `STOCK_HUNTER_MIN_OPTION_OPEN_INTEREST=1000`
+- `STOCK_HUNTER_MAX_BID_ASK_SPREAD_PCT=8`
+- `STOCK_HUNTER_TARGET_DELTA_MIN=0.50`
+- `STOCK_HUNTER_TARGET_DELTA_MAX=0.60`
+- `STOCK_HUNTER_ALLOW_TRADING=false`
+- `STOCK_HUNTER_READ_ONLY=true`
+
+Endpoints:
+
+- `GET /stock-hunter/status`
+- `GET /stock-hunter/watchlist`
+- `GET /stock-hunter/scan`
+- `GET /stock-hunter/analyze/{symbol}`
+- `GET /stock-hunter/options/{symbol}`
+
+Phase 16 does not place stock trades, options trades, or real broker orders. MooMoo trading remains disabled. Kraken live trading remains disabled.
+
 ## Safety Defaults
 
 The default configuration is intentionally conservative:
@@ -424,7 +458,7 @@ The default configuration is intentionally conservative:
 - `ENABLE_LIVE_TRADING=false`
 - `REQUIRE_LIVE_CONFIRMATION=true`
 - `LiveBroker` refuses orders unless every live safety condition passes
-- `ExecutionGuard` always reports live execution unavailable in Phase 15
+- `ExecutionGuard` always reports live execution unavailable in Phase 16
 - `SafetyAudit` must pass before future execution work
 - Exchange API secrets are never returned by API routes
 - No withdrawal functionality exists in this repository
@@ -497,6 +531,11 @@ Then open:
 - `http://127.0.0.1:8000/moomoo/status`
 - `http://127.0.0.1:8000/moomoo/health`
 - `http://127.0.0.1:8000/moomoo/capabilities`
+- `http://127.0.0.1:8000/stock-hunter/status`
+- `http://127.0.0.1:8000/stock-hunter/watchlist`
+- `http://127.0.0.1:8000/stock-hunter/scan`
+- `http://127.0.0.1:8000/stock-hunter/analyze/AAPL`
+- `http://127.0.0.1:8000/stock-hunter/options/AAPL`
 
 Use `BTC-USD` in path parameters because raw `BTC/USD` contains a slash and is not path-safe. The API converts `BTC-USD` to `BTC/USD` internally.
 
@@ -598,6 +637,16 @@ Invoke-RestMethod -Uri "http://127.0.0.1:8000/moomoo/health"
 Invoke-RestMethod -Uri "http://127.0.0.1:8000/moomoo/capabilities"
 ```
 
+Stock/Options Hunter read-only examples:
+
+```powershell
+Invoke-RestMethod -Uri "http://127.0.0.1:8000/stock-hunter/status"
+Invoke-RestMethod -Uri "http://127.0.0.1:8000/stock-hunter/watchlist"
+Invoke-RestMethod -Uri "http://127.0.0.1:8000/stock-hunter/scan"
+Invoke-RestMethod -Uri "http://127.0.0.1:8000/stock-hunter/analyze/AAPL"
+Invoke-RestMethod -Uri "http://127.0.0.1:8000/stock-hunter/options/AAPL"
+```
+
 ## Run Tests
 
 ```powershell
@@ -606,4 +655,4 @@ Invoke-RestMethod -Uri "http://127.0.0.1:8000/moomoo/capabilities"
 
 ## Live Trading Warning
 
-Live trading is locked down and not implemented in Phase 15. Kraken private access is read-only account data only. MooMoo is read-only feasibility only. Real order placement, live sell execution, live cancel execution, withdrawals, transfers, funding, staking, margin trading, options execution, and Coinbase integration are not implemented in this phase. Reporting, system, diagnostics, and MooMoo endpoints do not perform real exchange execution. Dry-run execution is only a preview, and paper/backtest/smoke-test results do not guarantee live performance.
+Live trading is locked down and not implemented in Phase 16. Kraken private access is read-only account data only. MooMoo is read-only feasibility only. Stock/Options Hunter is read-only skeleton only. Real order placement, live sell execution, live cancel execution, withdrawals, transfers, funding, staking, margin trading, options execution, and Coinbase integration are not implemented in this phase. Reporting, system, diagnostics, MooMoo, and Stock/Options Hunter endpoints do not perform real exchange execution. Dry-run execution is only a preview, and paper/backtest/smoke-test/scanner results do not guarantee live performance.

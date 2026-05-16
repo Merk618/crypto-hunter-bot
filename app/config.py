@@ -97,6 +97,16 @@ class Settings(BaseSettings):
     moomoo_unlock_trade_context: bool = Field(default=False, alias="MOOMOO_UNLOCK_TRADE_CONTEXT")
     moomoo_account_id: str = Field(default="", alias="MOOMOO_ACCOUNT_ID")
     moomoo_market_region: str = Field(default="US", alias="MOOMOO_MARKET_REGION")
+    stock_hunter_enabled: bool = Field(default=False, alias="STOCK_HUNTER_ENABLED")
+    stock_hunter_default_symbols: list[str] = Field(default_factory=lambda: ["AAPL", "MSFT", "NVDA", "META", "AMZN", "GOOGL", "TSLA"], alias="STOCK_HUNTER_DEFAULT_SYMBOLS")
+    stock_hunter_enable_options_analysis: bool = Field(default=True, alias="STOCK_HUNTER_ENABLE_OPTIONS_ANALYSIS")
+    stock_hunter_min_option_volume: int = Field(default=500, ge=0, alias="STOCK_HUNTER_MIN_OPTION_VOLUME")
+    stock_hunter_min_option_open_interest: int = Field(default=1000, ge=0, alias="STOCK_HUNTER_MIN_OPTION_OPEN_INTEREST")
+    stock_hunter_max_bid_ask_spread_pct: float = Field(default=8.0, ge=0, alias="STOCK_HUNTER_MAX_BID_ASK_SPREAD_PCT")
+    stock_hunter_target_delta_min: float = Field(default=0.50, ge=0, le=1, alias="STOCK_HUNTER_TARGET_DELTA_MIN")
+    stock_hunter_target_delta_max: float = Field(default=0.60, ge=0, le=1, alias="STOCK_HUNTER_TARGET_DELTA_MAX")
+    stock_hunter_allow_trading: bool = Field(default=False, alias="STOCK_HUNTER_ALLOW_TRADING")
+    stock_hunter_read_only: bool = Field(default=True, alias="STOCK_HUNTER_READ_ONLY")
     coinbase_api_key: str = Field(default="", alias="COINBASE_API_KEY")
     coinbase_api_secret: str = Field(default="", alias="COINBASE_API_SECRET")
     discord_webhook_url: str = Field(default="", alias="DISCORD_WEBHOOK_URL")
@@ -108,6 +118,14 @@ class Settings(BaseSettings):
         if isinstance(value, str):
             return [symbol.strip().upper() for symbol in value.split(",") if symbol.strip()]
         return [symbol.upper() for symbol in value]
+
+    @field_validator("stock_hunter_default_symbols", mode="before")
+    @classmethod
+    def parse_stock_symbols(cls, value: str | list[str]) -> list[str]:
+        """Parse comma-delimited stock symbols from environment variables."""
+        if isinstance(value, str):
+            return [symbol.strip().upper() for symbol in value.split(",") if symbol.strip()]
+        return [symbol.strip().upper() for symbol in value]
 
     @field_validator("base_currency")
     @classmethod
@@ -127,6 +145,10 @@ class Settings(BaseSettings):
             raise ValueError("MooMoo trading, paper trading, and trade-context unlock are disabled in this phase")
         if not self.moomoo_read_only:
             raise ValueError("MOOMOO_READ_ONLY must remain true in this phase")
+        if self.stock_hunter_allow_trading or not self.stock_hunter_read_only:
+            raise ValueError("Stock Hunter must remain read-only with trading disabled in this phase")
+        if self.stock_hunter_target_delta_min > self.stock_hunter_target_delta_max:
+            raise ValueError("STOCK_HUNTER_TARGET_DELTA_MIN cannot exceed STOCK_HUNTER_TARGET_DELTA_MAX")
         return self
 
     def has_exchange_api_keys(self) -> bool:

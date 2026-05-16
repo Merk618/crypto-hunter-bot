@@ -30,6 +30,7 @@ from app.diagnostics.calibration_report import CalibrationReport
 from app.diagnostics.smoke_test_runner import SmokeTestRunner
 from app.exchanges.kraken_adapter import EmptyMarketDataError, InvalidSymbolError, KrakenRequestError, UnsupportedTimeframeError
 from app.storage.database import init_db
+from app.stock_hunter.stock_hunter_service import StockHunterService
 from app.strategies.indicator_engine import IndicatorEngineError
 from app.strategies.signal_scoring import SignalScoringError
 
@@ -640,3 +641,33 @@ def moomoo_health() -> dict:
 def moomoo_capabilities() -> dict:
     """Return planned MooMoo read-only capabilities."""
     return MooMooReadOnlyClient(settings=get_settings()).get_supported_capabilities().to_dict()
+
+
+@router.get("/stock-hunter/status")
+def stock_hunter_status() -> dict:
+    """Return read-only Stock/Options Hunter status."""
+    return StockHunterService(settings=get_settings()).get_status()
+
+
+@router.get("/stock-hunter/watchlist")
+def stock_hunter_watchlist() -> dict:
+    """Return Stock/Options Hunter watchlist."""
+    return StockHunterService(settings=get_settings()).get_watchlist()
+
+
+@router.get("/stock-hunter/scan")
+def stock_hunter_scan() -> dict:
+    """Scan stock watchlist without trading."""
+    return StockHunterService(settings=get_settings()).scan_watchlist()
+
+
+@router.get("/stock-hunter/analyze/{symbol}")
+def stock_hunter_analyze(symbol: str) -> dict:
+    """Analyze one stock/ETF symbol without trading."""
+    return StockHunterService(settings=get_settings()).analyze_symbol(symbol)
+
+
+@router.get("/stock-hunter/options/{symbol}")
+def stock_hunter_options(symbol: str) -> dict:
+    """Analyze options chain research candidates without execution."""
+    return StockHunterService(settings=get_settings()).analyze_options(symbol)
