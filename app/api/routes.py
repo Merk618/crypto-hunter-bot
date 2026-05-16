@@ -31,6 +31,7 @@ from app.core.safety_audit import SafetyAudit
 from app.diagnostics.calibration_report import CalibrationReport
 from app.diagnostics.smoke_test_runner import SmokeTestRunner
 from app.exchanges.kraken_adapter import EmptyMarketDataError, InvalidSymbolError, KrakenRequestError, UnsupportedTimeframeError
+from app.operator.operator_service import OperatorService
 from app.storage.database import init_db
 from app.stock_hunter.stock_hunter_service import StockHunterService
 from app.reporting.unified_report_service import UnifiedReportService
@@ -673,6 +674,36 @@ def system_dependencies() -> dict:
 def system_safety_audit() -> dict:
     """Run a read-only safety audit."""
     return SafetyAudit(settings=get_settings()).run().to_dict()
+
+
+@router.get("/operator/status")
+def operator_status() -> dict:
+    """Return standalone operator status."""
+    return OperatorService(settings=get_settings()).get_operator_status()
+
+
+@router.get("/operator/startup-checks")
+def operator_startup_checks() -> dict:
+    """Run standalone startup checks."""
+    return OperatorService(settings=get_settings()).run_startup_checks()
+
+
+@router.get("/operator/commands")
+def operator_commands() -> dict:
+    """Return safe local operator commands."""
+    return OperatorService(settings=get_settings()).get_safe_command_summary()
+
+
+@router.get("/operator/daily-briefing")
+def operator_daily_briefing() -> dict:
+    """Return daily operator briefing."""
+    return OperatorService(settings=get_settings()).get_daily_operator_briefing()
+
+
+@router.get("/operator/next-actions")
+def operator_next_actions() -> dict:
+    """Return next recommended operator actions."""
+    return {"actions": OperatorService(settings=get_settings()).get_next_recommended_actions(), "source": "crypto_hunter_operator_next_actions_v1"}
 
 
 @router.get("/diagnostics/smoke-test")

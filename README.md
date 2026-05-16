@@ -4,7 +4,7 @@ Crypto Hunter is a backend trading engine for a sophisticated crypto trading bot
 
 ## Current Phase
 
-Phase 20 alerts and unified reporting:
+Phase 21 standalone operator polish:
 
 - Clean Python backend project
 - FastAPI health and status endpoints
@@ -37,8 +37,9 @@ Phase 20 alerts and unified reporting:
 - Refined Stock/Options Hunter signal engine with component scoring, RSI/EMA/MACD momentum logic, options liquidity scoring, DTE filters, and scanner ranking
 - Dedicated read-only options scanner with best-contract ranking across symbols
 - Read-only alert previews, daily briefing summaries, and unified top-candidate reporting across crypto, stocks, and options
+- Standalone operator status, startup checks, command summaries, daily briefing scripts, and local runbook endpoints
 
-Live trading and real exchange order execution are not implemented yet.
+Live trading and real exchange order execution are not implemented yet. Crypto Hunter remains standalone-first; YucaTanaTrades frontend integration comes later after local reliability is proven.
 
 ## Indicators
 
@@ -558,6 +559,32 @@ Unified report endpoints:
 
 Alerts are disabled and read-only by default. Discord is dry-run only in this phase, and webhook URLs are never returned.
 
+## Phase 21 Standalone Operator Polish
+
+Phase 21 keeps Crypto Hunter standalone-first and adds local operator visibility before any future YucaTanaTrades frontend integration.
+
+Docs:
+
+- [Standalone Operator Phase 21](docs/STANDALONE_OPERATOR_PHASE21.md)
+
+Operator endpoints:
+
+- `GET /operator/status`
+- `GET /operator/startup-checks`
+- `GET /operator/commands`
+- `GET /operator/daily-briefing`
+- `GET /operator/next-actions`
+
+Operator scripts:
+
+```powershell
+.\.venv\Scripts\python.exe scripts\operator_status.py
+.\.venv\Scripts\python.exe scripts\operator_smoke_check.py
+.\.venv\Scripts\python.exe scripts\operator_daily_briefing.py
+```
+
+YucaTanaTrades embedding is intentionally later. This backend should prove reliable as a standalone local bot first.
+
 ## Safety Defaults
 
 The default configuration is intentionally conservative:
@@ -566,7 +593,7 @@ The default configuration is intentionally conservative:
 - `ENABLE_LIVE_TRADING=false`
 - `REQUIRE_LIVE_CONFIRMATION=true`
 - `LiveBroker` refuses orders unless every live safety condition passes
-- `ExecutionGuard` always reports live execution unavailable in Phase 20
+- `ExecutionGuard` always reports live execution unavailable in Phase 21
 - `SafetyAudit` must pass before future execution work
 - Exchange API secrets are never returned by API routes
 - No withdrawal functionality exists in this repository
@@ -790,6 +817,19 @@ Invoke-RestMethod -Uri "http://127.0.0.1:8000/reports/daily-briefing"
 Invoke-RestMethod -Uri "http://127.0.0.1:8000/reports/system-health"
 ```
 
+Operator examples:
+
+```powershell
+Invoke-RestMethod -Uri "http://127.0.0.1:8000/operator/status"
+Invoke-RestMethod -Uri "http://127.0.0.1:8000/operator/startup-checks"
+Invoke-RestMethod -Uri "http://127.0.0.1:8000/operator/commands"
+Invoke-RestMethod -Uri "http://127.0.0.1:8000/operator/daily-briefing"
+Invoke-RestMethod -Uri "http://127.0.0.1:8000/operator/next-actions"
+.\.venv\Scripts\python.exe scripts\operator_status.py
+.\.venv\Scripts\python.exe scripts\operator_smoke_check.py
+.\.venv\Scripts\python.exe scripts\operator_daily_briefing.py
+```
+
 ## Run Tests
 
 ```powershell
@@ -798,4 +838,4 @@ Invoke-RestMethod -Uri "http://127.0.0.1:8000/reports/system-health"
 
 ## Live Trading Warning
 
-Live trading is locked down and not implemented in Phase 20. Kraken private access is read-only account data only. MooMoo is read-only market data only. Stock/Options Hunter, Options Scanner, alerts, and unified reports are read-only scanner/research/reporting only. Real order placement, live sell execution, live cancel execution, withdrawals, transfers, funding, staking, margin trading, options execution, external alert delivery, and Coinbase integration are not implemented in this phase. Reporting, alerts, system, diagnostics, MooMoo, Stock/Options Hunter, and Options Scanner endpoints do not perform real exchange execution. Dry-run execution is only a preview, and paper/backtest/smoke-test/scanner/reporting results do not guarantee live performance.
+Live trading is locked down and not implemented in Phase 21. Kraken private access is read-only account data only. MooMoo is read-only market data only. Stock/Options Hunter, Options Scanner, alerts, unified reports, and operator tooling are read-only scanner/research/reporting/status only. Real order placement, live sell execution, live cancel execution, withdrawals, transfers, funding, staking, margin trading, options execution, external alert delivery, and Coinbase integration are not implemented in this phase. Reporting, alerts, operator, system, diagnostics, MooMoo, Stock/Options Hunter, and Options Scanner endpoints do not perform real exchange execution. Dry-run execution is only a preview, and paper/backtest/smoke-test/scanner/reporting results do not guarantee live performance.
