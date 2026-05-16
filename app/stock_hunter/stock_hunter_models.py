@@ -24,7 +24,7 @@ class StockWatchlistItem:
 
 @dataclass
 class StockSignalResult:
-    """Read-only stock signal placeholder result."""
+    """Read-only refined stock signal result."""
 
     symbol: str
     score: int
@@ -35,7 +35,11 @@ class StockSignalResult:
     latest_price: float | None
     trend_status: str
     volume_status: str
-    source: str = "stock_hunter_signal_v1"
+    raw_score: int | None = None
+    momentum_status: str = "UNKNOWN"
+    options_status: str = "UNKNOWN"
+    component_scores: dict = field(default_factory=dict)
+    source: str = "stock_hunter_signal_v2"
 
     def to_dict(self) -> dict:
         """Return JSON-friendly output."""
@@ -63,6 +67,11 @@ class OptionContractSnapshot:
     vega: float | None = None
     spread_pct: float | None = None
     liquidity_score: float = 0.0
+    dte: int | None = None
+    contract_score: float = 0.0
+    candidate_label: str = "REJECTED"
+    reasons: list[str] = field(default_factory=list)
+    warnings: list[str] = field(default_factory=list)
 
     def to_dict(self) -> dict:
         """Return JSON-friendly output."""
@@ -71,7 +80,7 @@ class OptionContractSnapshot:
 
 @dataclass
 class OptionsChainAnalysis:
-    """Read-only options chain analysis."""
+    """Read-only refined options chain analysis."""
 
     underlying: str
     contracts_analyzed: int
@@ -79,7 +88,7 @@ class OptionsChainAnalysis:
     best_put_candidates: list[dict]
     rejected_contracts_count: int
     warnings: list[str] = field(default_factory=list)
-    source: str = "stock_hunter_options_chain_v1"
+    source: str = "stock_hunter_options_chain_v2"
 
     def to_dict(self) -> dict:
         """Return JSON-friendly output."""
@@ -88,16 +97,18 @@ class OptionsChainAnalysis:
 
 @dataclass
 class StockScannerResult:
-    """Read-only scanner result for one symbol."""
+    """Read-only ranked scanner result for one symbol."""
 
     symbol: str
     stock_signal: dict | None
     options_analysis: dict | None
+    opportunity_score: float
+    rank: int | None
     action: str
     notes: list[str]
     warnings: list[str]
     blockers: list[str]
-    source: str = "stock_hunter_scanner_v1"
+    source: str = "stock_hunter_scanner_v2"
 
     def to_dict(self) -> dict:
         """Return JSON-friendly output."""

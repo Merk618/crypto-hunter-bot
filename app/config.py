@@ -109,6 +109,17 @@ class Settings(BaseSettings):
     stock_hunter_target_delta_max: float = Field(default=0.60, ge=0, le=1, alias="STOCK_HUNTER_TARGET_DELTA_MAX")
     stock_hunter_allow_trading: bool = Field(default=False, alias="STOCK_HUNTER_ALLOW_TRADING")
     stock_hunter_read_only: bool = Field(default=True, alias="STOCK_HUNTER_READ_ONLY")
+    stock_hunter_min_stock_score: int = Field(default=65, ge=0, le=100, alias="STOCK_HUNTER_MIN_STOCK_SCORE")
+    stock_hunter_strong_score: int = Field(default=80, ge=0, le=100, alias="STOCK_HUNTER_STRONG_SCORE")
+    stock_hunter_require_market_open: bool = Field(default=False, alias="STOCK_HUNTER_REQUIRE_MARKET_OPEN")
+    stock_hunter_min_avg_volume: int = Field(default=500000, ge=0, alias="STOCK_HUNTER_MIN_AVG_VOLUME")
+    stock_hunter_max_extended_rsi: float = Field(default=75.0, ge=0, le=100, alias="STOCK_HUNTER_MAX_EXTENDED_RSI")
+    stock_hunter_ideal_rsi_min: float = Field(default=40.0, ge=0, le=100, alias="STOCK_HUNTER_IDEAL_RSI_MIN")
+    stock_hunter_ideal_rsi_max: float = Field(default=65.0, ge=0, le=100, alias="STOCK_HUNTER_IDEAL_RSI_MAX")
+    stock_hunter_options_min_dte: int = Field(default=14, ge=0, alias="STOCK_HUNTER_OPTIONS_MIN_DTE")
+    stock_hunter_options_max_dte: int = Field(default=90, ge=0, alias="STOCK_HUNTER_OPTIONS_MAX_DTE")
+    stock_hunter_options_target_dte_min: int = Field(default=21, ge=0, alias="STOCK_HUNTER_OPTIONS_TARGET_DTE_MIN")
+    stock_hunter_options_target_dte_max: int = Field(default=60, ge=0, alias="STOCK_HUNTER_OPTIONS_TARGET_DTE_MAX")
     coinbase_api_key: str = Field(default="", alias="COINBASE_API_KEY")
     coinbase_api_secret: str = Field(default="", alias="COINBASE_API_SECRET")
     discord_webhook_url: str = Field(default="", alias="DISCORD_WEBHOOK_URL")
@@ -151,6 +162,12 @@ class Settings(BaseSettings):
             raise ValueError("Stock Hunter must remain read-only with trading disabled in this phase")
         if self.stock_hunter_target_delta_min > self.stock_hunter_target_delta_max:
             raise ValueError("STOCK_HUNTER_TARGET_DELTA_MIN cannot exceed STOCK_HUNTER_TARGET_DELTA_MAX")
+        if self.stock_hunter_ideal_rsi_min > self.stock_hunter_ideal_rsi_max:
+            raise ValueError("STOCK_HUNTER_IDEAL_RSI_MIN cannot exceed STOCK_HUNTER_IDEAL_RSI_MAX")
+        if self.stock_hunter_options_min_dte > self.stock_hunter_options_max_dte:
+            raise ValueError("STOCK_HUNTER_OPTIONS_MIN_DTE cannot exceed STOCK_HUNTER_OPTIONS_MAX_DTE")
+        if self.stock_hunter_options_target_dte_min > self.stock_hunter_options_target_dte_max:
+            raise ValueError("STOCK_HUNTER_OPTIONS_TARGET_DTE_MIN cannot exceed STOCK_HUNTER_OPTIONS_TARGET_DTE_MAX")
         return self
 
     def has_exchange_api_keys(self) -> bool:

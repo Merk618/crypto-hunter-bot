@@ -19,4 +19,4 @@ def test_stock_models_serialize() -> None:
     signal = StockSignalResult("AAPL", 80, "LEADING", [], [], [], 100.0, "BULLISH", "ABOVE_AVERAGE")
 
     assert item.to_dict()["symbol"] == "AAPL"
-    assert signal.to_dict()["source"] == "stock_hunter_signal_v1"
+    assert signal.to_dict()["source"] == "stock_hunter_signal_v2"

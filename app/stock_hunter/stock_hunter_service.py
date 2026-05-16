@@ -49,7 +49,7 @@ class StockHunterService:
     def scan_watchlist(self) -> dict:
         """Scan active watchlist symbols without trading."""
         results = [result.to_dict() for result in self.scanner.scan(self.watchlist.get_active_symbols())]
-        return {"results": results, "trading_allowed": False, "source": "stock_hunter_scan_v1"}
+        return {"results": results, "trading_allowed": False, "source": "stock_hunter_scan_v2"}
 
     def analyze_symbol(self, symbol: str) -> dict:
         """Analyze one symbol without trading."""
@@ -61,3 +61,13 @@ class StockHunterService:
             return {"underlying": symbol.upper(), "available": False, "message": "Options analysis disabled"}
         chain = self.moomoo_client.get_option_chain(symbol.upper())
         return self.options_analyzer.analyze(symbol.upper(), chain.get("contracts", [])).to_dict()
+
+    def top_candidates(self, limit: int = 10) -> dict:
+        """Return ranked read-only research candidates."""
+        results = [result.to_dict() for result in self.scanner.scan(self.watchlist.get_active_symbols())]
+        return {
+            "results": results[:limit],
+            "trading_allowed": False,
+            "execution_enabled": False,
+            "source": "stock_hunter_top_candidates_v1",
+        }

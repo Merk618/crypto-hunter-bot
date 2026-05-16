@@ -17,15 +17,43 @@ class FakeProvider:
 
     def get_quote_snapshot(self, provider_symbol: str) -> dict:
         """Return fake quote."""
-        return {"latest_price": 200, "open": 190, "high": 205, "low": 188, "previous_close": 189, "volume": 1000000, "bid": 199.9, "ask": 200.1}
+        return {
+            "latest_price": 200,
+            "open": 190,
+            "high": 205,
+            "low": 188,
+            "previous_close": 189,
+            "volume": 2000000,
+            "avg_volume": 1000000,
+            "ema_20": 190,
+            "ema_50": 180,
+            "ema_200": 150,
+            "rsi": 55,
+            "macd_line": 3,
+            "macd_signal": 1,
+            "momentum_5d": 2,
+            "momentum_20d": 8,
+            "bid": 199.9,
+            "ask": 200.1,
+        }
 
     def get_historical_candles(self, provider_symbol: str, timeframe: str, limit: int) -> list[dict]:
         """Return fake candles."""
-        return [{"timestamp": "2026-01-01", "open": 190, "high": 205, "low": 188, "close": 200, "volume": 1000}]
+        return [
+            {
+                "timestamp": f"2026-01-{(idx % 28) + 1:02d}",
+                "open": 120 + idx * 0.35,
+                "high": 121 + idx * 0.35,
+                "low": 119 + idx * 0.35,
+                "close": 120 + idx * 0.4,
+                "volume": 1000000 + idx * 1000,
+            }
+            for idx in range(220)
+        ]
 
     def get_option_chain(self, provider_symbol: str) -> list[dict]:
         """Return fake option chain."""
-        return [{"symbol": "US.AAPL260116C00200000", "underlying": "AAPL", "expiration": "2026-01-16", "strike": 200, "option_type": "call", "bid": 4.9, "ask": 5.1, "last": 5, "volume": 1000, "open_interest": 2000, "delta": 0.55}]
+        return [{"symbol": "US.AAPL260619C00200000", "underlying": "AAPL", "expiration": "2026-06-19", "strike": 200, "option_type": "call", "bid": 4.9, "ask": 5.1, "last": 5, "volume": 1000, "open_interest": 2000, "delta": 0.55}]
 
 
 def enabled_client(provider=None) -> MooMooReadOnlyClient:

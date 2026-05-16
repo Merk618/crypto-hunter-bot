@@ -4,7 +4,7 @@ Crypto Hunter is a backend trading engine for a sophisticated crypto trading bot
 
 ## Current Phase
 
-Phase 17 MooMoo read-only market data adapter:
+Phase 18 Stock/Options Hunter signal refinement:
 
 - Clean Python backend project
 - FastAPI health and status endpoints
@@ -34,6 +34,7 @@ Phase 17 MooMoo read-only market data adapter:
 - MooMoo read-only feasibility layer for package/OpenD health and future capability reporting
 - Stock/Options Hunter read-only skeleton with watchlist, stock signal placeholder, options-chain analyzer, scanner, and service endpoints
 - MooMoo read-only quote, candle, market-state, and option-chain adapter with Stock Hunter integration
+- Refined Stock/Options Hunter signal engine with component scoring, RSI/EMA/MACD momentum logic, options liquidity scoring, DTE filters, and scanner ranking
 
 Live trading and real exchange order execution are not implemented yet.
 
@@ -478,6 +479,27 @@ If OpenD is disconnected, `moomoo-api` is missing, or `MOOMOO_ENABLED=false`, th
 
 MooMoo trading remains disabled. Kraken live trading remains disabled.
 
+## Phase 18 Stock/Options Signal Refinement
+
+Phase 18 refines the read-only Stock/Options Hunter research signals using MooMoo quote, candle, market-state, and option-chain data when available.
+
+Docs:
+
+- [Stock/Options Signal Refinement Phase 18](docs/STOCK_OPTIONS_SIGNAL_REFINEMENT_PHASE18.md)
+
+Refinements:
+
+- Stock score components for trend, momentum, volume/liquidity, market quality, and options support.
+- RSI interpretation with elevated and overextended warnings.
+- Options DTE filters, liquidity score, contract score, and research-only candidate labels.
+- Scanner ranking by `opportunity_score`.
+
+New endpoint:
+
+- `GET /stock-hunter/top-candidates`
+
+MooMoo remains read-only. Options execution is not implemented. Kraken live trading remains disabled.
+
 ## Safety Defaults
 
 The default configuration is intentionally conservative:
@@ -486,7 +508,7 @@ The default configuration is intentionally conservative:
 - `ENABLE_LIVE_TRADING=false`
 - `REQUIRE_LIVE_CONFIRMATION=true`
 - `LiveBroker` refuses orders unless every live safety condition passes
-- `ExecutionGuard` always reports live execution unavailable in Phase 17
+- `ExecutionGuard` always reports live execution unavailable in Phase 18
 - `SafetyAudit` must pass before future execution work
 - Exchange API secrets are never returned by API routes
 - No withdrawal functionality exists in this repository
@@ -677,9 +699,17 @@ Stock/Options Hunter read-only examples:
 Invoke-RestMethod -Uri "http://127.0.0.1:8000/stock-hunter/status"
 Invoke-RestMethod -Uri "http://127.0.0.1:8000/stock-hunter/watchlist"
 Invoke-RestMethod -Uri "http://127.0.0.1:8000/stock-hunter/scan"
+Invoke-RestMethod -Uri "http://127.0.0.1:8000/stock-hunter/top-candidates"
 Invoke-RestMethod -Uri "http://127.0.0.1:8000/stock-hunter/analyze/AAPL"
 Invoke-RestMethod -Uri "http://127.0.0.1:8000/stock-hunter/options/AAPL"
 ```
+
+Phase 18 details:
+
+- [Stock/Options signal refinement](docs/STOCK_OPTIONS_SIGNAL_REFINEMENT_PHASE18.md)
+- Stock signals now include trend, momentum, volume/liquidity, market quality, and options-support component scores.
+- Options analysis now includes DTE rules, liquidity scores, contract scores, and research-only candidate labels.
+- Scanner results are ranked by read-only opportunity score.
 
 ## Run Tests
 
@@ -689,4 +719,4 @@ Invoke-RestMethod -Uri "http://127.0.0.1:8000/stock-hunter/options/AAPL"
 
 ## Live Trading Warning
 
-Live trading is locked down and not implemented in Phase 17. Kraken private access is read-only account data only. MooMoo is read-only market data only. Stock/Options Hunter is read-only scanner/research only. Real order placement, live sell execution, live cancel execution, withdrawals, transfers, funding, staking, margin trading, options execution, and Coinbase integration are not implemented in this phase. Reporting, system, diagnostics, MooMoo, and Stock/Options Hunter endpoints do not perform real exchange execution. Dry-run execution is only a preview, and paper/backtest/smoke-test/scanner results do not guarantee live performance.
+Live trading is locked down and not implemented in Phase 18. Kraken private access is read-only account data only. MooMoo is read-only market data only. Stock/Options Hunter is read-only scanner/research only. Real order placement, live sell execution, live cancel execution, withdrawals, transfers, funding, staking, margin trading, options execution, and Coinbase integration are not implemented in this phase. Reporting, system, diagnostics, MooMoo, and Stock/Options Hunter endpoints do not perform real exchange execution. Dry-run execution is only a preview, and paper/backtest/smoke-test/scanner results do not guarantee live performance.

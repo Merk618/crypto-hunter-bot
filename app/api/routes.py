@@ -680,6 +680,12 @@ def stock_hunter_scan() -> dict:
     return StockHunterService(settings=get_settings()).scan_watchlist()
 
 
+@router.get("/stock-hunter/top-candidates")
+def stock_hunter_top_candidates(limit: int = Query(default=10, ge=1, le=100)) -> dict:
+    """Return ranked read-only Stock/Options Hunter research candidates."""
+    return StockHunterService(settings=get_settings()).top_candidates(limit=limit)
+
+
 @router.get("/stock-hunter/analyze/{symbol}")
 def stock_hunter_analyze(symbol: str) -> dict:
     """Analyze one stock/ETF symbol without trading."""

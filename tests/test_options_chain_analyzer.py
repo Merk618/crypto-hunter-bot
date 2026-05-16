@@ -9,7 +9,7 @@ def contract(**overrides) -> dict:
     data = {
         "symbol": "AAPL260116C00150000",
         "underlying": "AAPL",
-        "expiration": "2026-01-16",
+        "expiration": "2026-06-19",
         "strike": 150,
         "option_type": "call",
         "bid": 4.9,

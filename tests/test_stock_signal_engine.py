@@ -16,10 +16,25 @@ def test_stock_signal_engine_scores_mock_bullish_data() -> None:
     """Bullish mock data can score as leading."""
     result = StockSignalEngine().score(
         "AAPL",
-        quote={"last_price": 150, "moving_average": 140, "volume": 2_000_000, "avg_volume": 1_000_000, "momentum": 1.5},
+        quote={
+            "last_price": 150,
+            "ema_20": 145,
+            "ema_50": 140,
+            "ema_200": 120,
+            "rsi": 55,
+            "macd_line": 2.5,
+            "macd_signal": 1.2,
+            "volume": 2_000_000,
+            "avg_volume": 1_000_000,
+            "momentum_5d": 1.5,
+            "momentum_20d": 4.0,
+            "previous_close": 148,
+            "bid": 149.9,
+            "ask": 150.1,
+        },
     )
 
     assert result.score >= 80
     assert result.category == "LEADING"
     assert result.trend_status == "BULLISH"
-    assert result.volume_status == "ABOVE_AVERAGE"
+    assert result.volume_status == "HEALTHY"
