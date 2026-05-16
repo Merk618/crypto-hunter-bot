@@ -146,11 +146,19 @@ class Settings(BaseSettings):
     alert_max_items_per_section: int = Field(default=10, ge=1, alias="ALERT_MAX_ITEMS_PER_SECTION")
     alert_include_risk_status: bool = Field(default=True, alias="ALERT_INCLUDE_RISK_STATUS")
     alert_include_safety_status: bool = Field(default=True, alias="ALERT_INCLUDE_SAFETY_STATUS")
+    real_data_validation_enabled: bool = Field(default=False, alias="REAL_DATA_VALIDATION_ENABLED")
+    real_data_validation_read_only: bool = Field(default=True, alias="REAL_DATA_VALIDATION_READ_ONLY")
+    validation_symbols_crypto: list[str] = Field(default_factory=lambda: ["BTC/USD", "ETH/USD", "SOL/USD", "SUI/USD"], alias="VALIDATION_SYMBOLS_CRYPTO")
+    validation_symbols_stock: list[str] = Field(default_factory=lambda: ["AAPL", "MSFT", "NVDA", "META", "TSLA"], alias="VALIDATION_SYMBOLS_STOCK")
+    validation_timeframe_crypto: str = Field(default="1h", alias="VALIDATION_TIMEFRAME_CRYPTO")
+    validation_timeframe_stock: str = Field(default="1d", alias="VALIDATION_TIMEFRAME_STOCK")
+    validation_candle_limit: int = Field(default=250, ge=1, alias="VALIDATION_CANDLE_LIMIT")
+    validation_require_safety_audit: bool = Field(default=True, alias="VALIDATION_REQUIRE_SAFETY_AUDIT")
     coinbase_api_key: str = Field(default="", alias="COINBASE_API_KEY")
     coinbase_api_secret: str = Field(default="", alias="COINBASE_API_SECRET")
     discord_webhook_url: str = Field(default="", alias="DISCORD_WEBHOOK_URL")
 
-    @field_validator("allowed_symbols", "phase14_smoke_symbols", mode="before")
+    @field_validator("allowed_symbols", "phase14_smoke_symbols", "validation_symbols_crypto", mode="before")
     @classmethod
     def parse_allowed_symbols(cls, value: str | list[str]) -> list[str]:
         """Parse comma-delimited symbols from environment variables."""
@@ -158,7 +166,7 @@ class Settings(BaseSettings):
             return [symbol.strip().upper() for symbol in value.split(",") if symbol.strip()]
         return [symbol.upper() for symbol in value]
 
-    @field_validator("stock_hunter_default_symbols", mode="before")
+    @field_validator("stock_hunter_default_symbols", "validation_symbols_stock", mode="before")
     @classmethod
     def parse_stock_symbols(cls, value: str | list[str]) -> list[str]:
         """Parse comma-delimited stock symbols from environment variables."""
@@ -206,6 +214,8 @@ class Settings(BaseSettings):
             raise ValueError("ALERTS_READ_ONLY must remain true in this phase")
         if self.alert_channel_email:
             raise ValueError("Email alerts are disabled in this phase")
+        if not self.real_data_validation_read_only:
+            raise ValueError("REAL_DATA_VALIDATION_READ_ONLY must remain true in this phase")
         return self
 
     def has_exchange_api_keys(self) -> bool:

@@ -38,6 +38,7 @@ from app.reporting.unified_report_service import UnifiedReportService
 from app.stock_hunter.options_strategy_models import OptionsScanRequest
 from app.strategies.indicator_engine import IndicatorEngineError
 from app.strategies.signal_scoring import SignalScoringError
+from app.validation.real_data_validator import RealDataValidator
 
 import pandas as pd
 
@@ -704,6 +705,51 @@ def operator_daily_briefing() -> dict:
 def operator_next_actions() -> dict:
     """Return next recommended operator actions."""
     return {"actions": OperatorService(settings=get_settings()).get_next_recommended_actions(), "source": "crypto_hunter_operator_next_actions_v1"}
+
+
+@router.get("/validation/status")
+def validation_status() -> dict:
+    """Return read-only validation configuration status."""
+    settings = get_settings()
+    return {
+        "enabled": settings.real_data_validation_enabled,
+        "read_only": settings.real_data_validation_read_only,
+        "crypto_symbols": settings.validation_symbols_crypto,
+        "stock_symbols": settings.validation_symbols_stock,
+        "source": "crypto_hunter_validation_status_v1",
+    }
+
+
+@router.get("/validation/run")
+def validation_run() -> dict:
+    """Run all read-only real-data validation checks."""
+    return RealDataValidator(settings=get_settings()).run_all_checks()
+
+
+@router.get("/validation/kraken")
+def validation_kraken() -> dict:
+    """Run read-only Kraken public validation."""
+    validator = RealDataValidator(settings=get_settings())
+    checks = [validator.validate_safety_audit(), validator.validate_kraken_public_data(), validator.validate_crypto_signals()]
+    from app.validation.validation_report import build_validation_report
+
+    return build_validation_report(checks).to_dict()
+
+
+@router.get("/validation/moomoo")
+def validation_moomoo() -> dict:
+    """Run read-only MooMoo validation."""
+    validator = RealDataValidator(settings=get_settings())
+    checks = [validator.validate_moomoo_health(), validator.validate_stock_hunter(), validator.validate_options_scanner()]
+    from app.validation.validation_report import build_validation_report
+
+    return build_validation_report(checks).to_dict()
+
+
+@router.get("/validation/report")
+def validation_report() -> dict:
+    """Return full read-only validation report."""
+    return RealDataValidator(settings=get_settings()).run_all_checks()
 
 
 @router.get("/diagnostics/smoke-test")
