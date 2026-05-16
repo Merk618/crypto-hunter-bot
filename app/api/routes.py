@@ -4,6 +4,7 @@ from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
 
 from app.bot.paper_trading_bot import PaperTradingBotError
+from app.alerts.alert_service import AlertService
 from app.backtesting.backtest_engine import BacktestDataError, BacktestEngine
 from app.config import get_settings
 from app.connectors.moomoo.moomoo_config import get_moomoo_config
@@ -32,6 +33,7 @@ from app.diagnostics.smoke_test_runner import SmokeTestRunner
 from app.exchanges.kraken_adapter import EmptyMarketDataError, InvalidSymbolError, KrakenRequestError, UnsupportedTimeframeError
 from app.storage.database import init_db
 from app.stock_hunter.stock_hunter_service import StockHunterService
+from app.reporting.unified_report_service import UnifiedReportService
 from app.stock_hunter.options_strategy_models import OptionsScanRequest
 from app.strategies.indicator_engine import IndicatorEngineError
 from app.strategies.signal_scoring import SignalScoringError
@@ -504,6 +506,54 @@ def report_equity_curve(limit: int = Query(default=500, ge=1, le=5000)) -> dict:
 def report_full_dashboard() -> dict:
     """Return full read-only dashboard snapshot."""
     return get_dashboard_service().get_full_dashboard_snapshot()
+
+
+@router.get("/reports/unified-summary")
+def reports_unified_summary() -> dict:
+    """Return read-only unified dashboard summary."""
+    return UnifiedReportService(settings=get_settings()).get_unified_dashboard_summary()
+
+
+@router.get("/reports/top-candidates")
+def reports_top_candidates() -> dict:
+    """Return read-only top candidates across crypto, stock, and options."""
+    return UnifiedReportService(settings=get_settings()).get_top_candidates()
+
+
+@router.get("/reports/daily-briefing")
+def reports_daily_briefing() -> dict:
+    """Return read-only daily briefing data."""
+    return UnifiedReportService(settings=get_settings()).get_daily_briefing()
+
+
+@router.get("/reports/system-health")
+def reports_system_health() -> dict:
+    """Return read-only system health summary."""
+    return UnifiedReportService(settings=get_settings()).get_system_health_summary()
+
+
+@router.get("/alerts/status")
+def alerts_status() -> dict:
+    """Return alert status without secrets."""
+    return AlertService(settings=get_settings()).get_alert_status()
+
+
+@router.get("/alerts/preview")
+def alerts_preview() -> dict:
+    """Preview alert report without external sends."""
+    return AlertService(settings=get_settings()).preview_alert_report()
+
+
+@router.post("/alerts/send-console")
+def alerts_send_console() -> dict:
+    """Send or block console alert according to read-only alert settings."""
+    return AlertService(settings=get_settings()).send_console_alert()
+
+
+@router.post("/alerts/send-discord-dry-run")
+def alerts_send_discord_dry_run() -> dict:
+    """Dry-run Discord alert without calling external webhooks."""
+    return AlertService(settings=get_settings()).send_discord_alert_dry_run()
 
 
 @router.get("/account/status")

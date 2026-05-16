@@ -135,6 +135,17 @@ class Settings(BaseSettings):
     options_scanner_max_iv_rank_warning: float = Field(default=70.0, ge=0, le=100, alias="OPTIONS_SCANNER_MAX_IV_RANK_WARNING")
     options_scanner_min_underlying_score: int = Field(default=65, ge=0, le=100, alias="OPTIONS_SCANNER_MIN_UNDERLYING_SCORE")
     options_scanner_top_n: int = Field(default=10, ge=1, alias="OPTIONS_SCANNER_TOP_N")
+    alerts_enabled: bool = Field(default=False, alias="ALERTS_ENABLED")
+    alerts_read_only: bool = Field(default=True, alias="ALERTS_READ_ONLY")
+    alert_channel_console: bool = Field(default=True, alias="ALERT_CHANNEL_CONSOLE")
+    alert_channel_discord: bool = Field(default=False, alias="ALERT_CHANNEL_DISCORD")
+    alert_channel_email: bool = Field(default=False, alias="ALERT_CHANNEL_EMAIL")
+    alert_min_crypto_score: int = Field(default=80, ge=0, le=100, alias="ALERT_MIN_CRYPTO_SCORE")
+    alert_min_stock_score: int = Field(default=80, ge=0, le=100, alias="ALERT_MIN_STOCK_SCORE")
+    alert_min_options_score: int = Field(default=75, ge=0, le=100, alias="ALERT_MIN_OPTIONS_SCORE")
+    alert_max_items_per_section: int = Field(default=10, ge=1, alias="ALERT_MAX_ITEMS_PER_SECTION")
+    alert_include_risk_status: bool = Field(default=True, alias="ALERT_INCLUDE_RISK_STATUS")
+    alert_include_safety_status: bool = Field(default=True, alias="ALERT_INCLUDE_SAFETY_STATUS")
     coinbase_api_key: str = Field(default="", alias="COINBASE_API_KEY")
     coinbase_api_secret: str = Field(default="", alias="COINBASE_API_SECRET")
     discord_webhook_url: str = Field(default="", alias="DISCORD_WEBHOOK_URL")
@@ -191,6 +202,10 @@ class Settings(BaseSettings):
             raise ValueError("OPTIONS_SCANNER_MIN_DTE cannot exceed OPTIONS_SCANNER_MAX_DTE")
         if self.options_scanner_target_dte_min > self.options_scanner_target_dte_max:
             raise ValueError("OPTIONS_SCANNER_TARGET_DTE_MIN cannot exceed OPTIONS_SCANNER_TARGET_DTE_MAX")
+        if not self.alerts_read_only:
+            raise ValueError("ALERTS_READ_ONLY must remain true in this phase")
+        if self.alert_channel_email:
+            raise ValueError("Email alerts are disabled in this phase")
         return self
 
     def has_exchange_api_keys(self) -> bool:

@@ -4,7 +4,7 @@ Crypto Hunter is a backend trading engine for a sophisticated crypto trading bot
 
 ## Current Phase
 
-Phase 19 dedicated options scanner:
+Phase 20 alerts and unified reporting:
 
 - Clean Python backend project
 - FastAPI health and status endpoints
@@ -36,6 +36,7 @@ Phase 19 dedicated options scanner:
 - MooMoo read-only quote, candle, market-state, and option-chain adapter with Stock Hunter integration
 - Refined Stock/Options Hunter signal engine with component scoring, RSI/EMA/MACD momentum logic, options liquidity scoring, DTE filters, and scanner ranking
 - Dedicated read-only options scanner with best-contract ranking across symbols
+- Read-only alert previews, daily briefing summaries, and unified top-candidate reporting across crypto, stocks, and options
 
 Live trading and real exchange order execution are not implemented yet.
 
@@ -533,6 +534,30 @@ Endpoints:
 
 MooMoo remains read-only. Options execution is not implemented. Kraken live trading remains disabled.
 
+## Phase 20 Alerts and Unified Reporting
+
+Phase 20 adds read-only alert previews and reporting polish for Crypto Hunter, Stock Hunter, and Options Scanner.
+
+Docs:
+
+- [Alerts and Unified Reporting Phase 20](docs/ALERTS_REPORTING_PHASE20.md)
+
+Alert endpoints:
+
+- `GET /alerts/status`
+- `GET /alerts/preview`
+- `POST /alerts/send-console`
+- `POST /alerts/send-discord-dry-run`
+
+Unified report endpoints:
+
+- `GET /reports/unified-summary`
+- `GET /reports/top-candidates`
+- `GET /reports/daily-briefing`
+- `GET /reports/system-health`
+
+Alerts are disabled and read-only by default. Discord is dry-run only in this phase, and webhook URLs are never returned.
+
 ## Safety Defaults
 
 The default configuration is intentionally conservative:
@@ -541,7 +566,7 @@ The default configuration is intentionally conservative:
 - `ENABLE_LIVE_TRADING=false`
 - `REQUIRE_LIVE_CONFIRMATION=true`
 - `LiveBroker` refuses orders unless every live safety condition passes
-- `ExecutionGuard` always reports live execution unavailable in Phase 19
+- `ExecutionGuard` always reports live execution unavailable in Phase 20
 - `SafetyAudit` must pass before future execution work
 - Exchange API secrets are never returned by API routes
 - No withdrawal functionality exists in this repository
@@ -752,6 +777,19 @@ Invoke-RestMethod -Method Post -Uri "http://127.0.0.1:8000/options-scanner/scan"
 Invoke-RestMethod -Uri "http://127.0.0.1:8000/options-scanner/top"
 ```
 
+Alert and unified reporting examples:
+
+```powershell
+Invoke-RestMethod -Uri "http://127.0.0.1:8000/alerts/status"
+Invoke-RestMethod -Uri "http://127.0.0.1:8000/alerts/preview"
+Invoke-RestMethod -Method Post -Uri "http://127.0.0.1:8000/alerts/send-console"
+Invoke-RestMethod -Method Post -Uri "http://127.0.0.1:8000/alerts/send-discord-dry-run"
+Invoke-RestMethod -Uri "http://127.0.0.1:8000/reports/unified-summary"
+Invoke-RestMethod -Uri "http://127.0.0.1:8000/reports/top-candidates"
+Invoke-RestMethod -Uri "http://127.0.0.1:8000/reports/daily-briefing"
+Invoke-RestMethod -Uri "http://127.0.0.1:8000/reports/system-health"
+```
+
 ## Run Tests
 
 ```powershell
@@ -760,4 +798,4 @@ Invoke-RestMethod -Uri "http://127.0.0.1:8000/options-scanner/top"
 
 ## Live Trading Warning
 
-Live trading is locked down and not implemented in Phase 19. Kraken private access is read-only account data only. MooMoo is read-only market data only. Stock/Options Hunter and Options Scanner are read-only scanner/research only. Real order placement, live sell execution, live cancel execution, withdrawals, transfers, funding, staking, margin trading, options execution, and Coinbase integration are not implemented in this phase. Reporting, system, diagnostics, MooMoo, Stock/Options Hunter, and Options Scanner endpoints do not perform real exchange execution. Dry-run execution is only a preview, and paper/backtest/smoke-test/scanner results do not guarantee live performance.
+Live trading is locked down and not implemented in Phase 20. Kraken private access is read-only account data only. MooMoo is read-only market data only. Stock/Options Hunter, Options Scanner, alerts, and unified reports are read-only scanner/research/reporting only. Real order placement, live sell execution, live cancel execution, withdrawals, transfers, funding, staking, margin trading, options execution, external alert delivery, and Coinbase integration are not implemented in this phase. Reporting, alerts, system, diagnostics, MooMoo, Stock/Options Hunter, and Options Scanner endpoints do not perform real exchange execution. Dry-run execution is only a preview, and paper/backtest/smoke-test/scanner/reporting results do not guarantee live performance.
