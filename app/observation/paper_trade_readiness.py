@@ -41,6 +41,7 @@ class PaperTradeReadinessService:
         decision = self.decision_gate.evaluate(completed, safety_report=safety).to_dict()
         hygiene = self.risk_hygiene.summary(records=risk_records)
         recent_cleanliness = self._recent_cleanliness(hygiene, risk_records)
+        legacy_aware = self._legacy_aware_readiness(recent_cleanliness, risk_records)
         early = EarlyRecoveryWatchlistService(settings=self.settings, runs=completed).get_report()
         strong_buy_count = sum(1 for result in results if (result.get("signal") or {}).get("category") == "STRONG_BUY")
         risk_approved_count = sum(1 for result in results if (result.get("risk_decision") or {}).get("approved"))
@@ -52,7 +53,7 @@ class PaperTradeReadinessService:
             self._check("observations", len(results) >= self.settings.paper_trade_observation_min_observations, "Enough observations required", {"observations": len(results)}),
             self._check("strong_buy_signals", strong_buy_count > 0 or not self.settings.paper_trade_observation_require_strong_buy, "STRONG_BUY observations required for paper-trade review", {"strong_buy_count": strong_buy_count}),
             self._check("risk_approvals", risk_approved_count > 0 or not self.settings.paper_trade_observation_require_risk_approval, "Risk-approved observations required for paper-trade review", {"risk_approved_count": risk_approved_count}),
-            self._check("risk_record_hygiene", recent_cleanliness.get("blocking_inconsistency_count", hygiene["inconsistency_count"]) <= self.settings.paper_trade_observation_max_recent_risk_inconsistencies, "Risk records must be internally consistent", {"hygiene": hygiene, "recent_cleanliness": recent_cleanliness}),
+            self._check("risk_record_hygiene", recent_cleanliness.get("blocking_inconsistency_count", hygiene["inconsistency_count"]) <= self.settings.paper_trade_observation_max_recent_risk_inconsistencies, "Risk records must be internally consistent", {"hygiene": hygiene, "recent_cleanliness": recent_cleanliness, "legacy_aware_readiness": legacy_aware}),
             self._check("early_recovery_observe_only", self._early_recovery_observe_only(early), "Early recovery must remain observe-only", {"early_recovery_count": len(early.get("candidates", []))}),
             self._check("paper_trades_disabled", not self.settings.paper_trade_observation_allow_enable, "Paper trade observation must remain disabled in this phase", {}),
             self._check("operator_approval_required", self.settings.paper_trade_observation_require_operator_approval, "Future paper-trade observation requires operator approval", {}),
@@ -61,6 +62,8 @@ class PaperTradeReadinessService:
         warnings = [warning for check in checks for warning in check.warnings]
         if hygiene["inconsistency_count"]:
             warnings.append("Risk record hygiene requires review before paper-trade observation.")
+        if legacy_aware.get("legacy_present"):
+            warnings.append("Legacy risk records remain in audit history and are not deleted.")
         report = PaperTradeReadinessReport(
             ready=False,
             decision="BLOCKED" if self._hard_blocked(checks) else ("OBSERVE_ONLY" if early.get("candidates") else "NOT_READY"),
@@ -108,6 +111,20 @@ class PaperTradeReadinessService:
             "passed": bool(hygiene.get("passed")),
             "blocking_inconsistency_count": hygiene.get("inconsistency_count", 0),
             "source": "crypto_hunter_risk_recent_cleanliness_v1",
+        }
+
+    def _legacy_aware_readiness(self, recent_cleanliness: dict, risk_records: list[dict] | None) -> dict:
+        """Return legacy-aware readiness while tolerating older test doubles."""
+        if risk_records is None and hasattr(self.risk_hygiene, "legacy_aware_readiness"):
+            return self.risk_hygiene.legacy_aware_readiness()
+        if risk_records is not None and hasattr(self.risk_hygiene, "legacy_aware_readiness"):
+            return self.risk_hygiene.legacy_aware_readiness(records=risk_records)
+        return {
+            "passed": bool(recent_cleanliness.get("passed")),
+            "current_clean": recent_cleanliness.get("current_inconsistency_count", 0) == 0,
+            "legacy_present": recent_cleanliness.get("legacy_inconsistency_count", 0) > 0,
+            "legacy_warn_only": recent_cleanliness.get("legacy_warn_only", False),
+            "source": "crypto_hunter_legacy_aware_risk_readiness_v1",
         }
 
     def _hard_blocked(self, checks: list[PaperTradeReadinessCheck]) -> bool:

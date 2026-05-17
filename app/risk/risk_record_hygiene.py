@@ -110,7 +110,7 @@ class RiskRecordHygiene:
 
     def validate_recent_records_only(self, limit: int | None = None) -> dict:
         """Validate only recent records according to configured limit."""
-        limit = limit or self.settings.risk_hygiene_recent_record_limit
+        limit = limit or self.settings.risk_hygiene_current_record_lookback
         records = self.journal.get_recent_risk_decisions(limit=limit)
         return self.validate_recent_records_only_from_records(records, limit)
 
@@ -120,15 +120,46 @@ class RiskRecordHygiene:
         inconsistencies = self.scan_records(records=records)
         current = [issue for issue in inconsistencies if not self.is_legacy_inconsistency(self._record_by_id(records, issue.record_id))]
         legacy = [issue for issue in inconsistencies if self.is_legacy_inconsistency(self._record_by_id(records, issue.record_id))]
-        blocking = current + ([] if self.settings.risk_hygiene_ignore_legacy_in_readiness else legacy)
+        legacy_warn_only = self.settings.risk_hygiene_legacy_records_warn_only and not self.settings.risk_hygiene_legacy_records_block_paper_readiness
+        blocking = current + ([] if legacy_warn_only else legacy)
+        warnings = []
+        if legacy:
+            warnings.append("Legacy risk records remain in audit history and are not deleted.")
         return {
             "passed": not blocking,
             "recent_limit": limit,
+            "current_clean": not current,
+            "legacy_present": bool(legacy),
+            "legacy_warn_only": legacy_warn_only,
             "current_inconsistency_count": len(current),
             "legacy_inconsistency_count": len(legacy),
             "blocking_inconsistency_count": len(blocking),
+            "warnings": warnings,
+            "blockers": [issue.message for issue in current],
             "preview_only": True,
             "source": "crypto_hunter_risk_recent_cleanliness_v1",
+        }
+
+    def legacy_aware_readiness(self, records: list[dict] | None = None, limit: int | None = None) -> dict:
+        """Return legacy-aware risk readiness."""
+        if records is None:
+            records = self.journal.get_recent_risk_decisions(limit=limit or self.settings.risk_hygiene_current_record_lookback)
+        classification_summary = self.summarize_by_classification(records)
+        recent = self.validate_recent_records_only_from_records(records, limit or len(records))
+        warnings = list(recent.get("warnings", []))
+        blockers = list(recent.get("blockers", []))
+        return {
+            "passed": bool(recent.get("passed")),
+            "current_clean": bool(recent.get("current_clean")),
+            "legacy_present": bool(recent.get("legacy_present")),
+            "legacy_warn_only": bool(recent.get("legacy_warn_only")),
+            "current_inconsistency_count": recent.get("current_inconsistency_count", 0),
+            "legacy_inconsistency_count": recent.get("legacy_inconsistency_count", 0),
+            "blocking_inconsistency_count": recent.get("blocking_inconsistency_count", 0),
+            "classification_summary": classification_summary,
+            "warnings": warnings,
+            "blockers": blockers,
+            "source": "crypto_hunter_legacy_aware_risk_readiness_v1",
         }
 
     def normalize_rejected_decision_payload(self, payload: dict) -> dict:

@@ -7,6 +7,7 @@ from datetime import datetime, timezone
 from app.config import Settings, get_settings
 from app.core.safety_audit import SafetyAudit
 from app.journal.journal_filters import dedupe_candidates, filter_production_records
+from app.observation.clean_observation_verifier import CleanObservationVerifier
 from app.observation.early_recovery_watchlist import EarlyRecoveryWatchlistService
 from app.observation.paper_trade_readiness import PaperTradeReadinessService
 from app.reporting.candidate_summary import candidate_from_crypto_signal, candidate_from_early_recovery, candidate_from_ranked_option, candidate_from_stock_result
@@ -76,6 +77,8 @@ class UnifiedReportService:
         return {
             "risk": risk,
             "risk_record_hygiene": self._safe(lambda: RiskRecordHygiene().summary(limit=100), {"passed": True, "inconsistency_count": 0}),
+            "legacy_aware_risk_readiness": self._safe(lambda: RiskRecordHygiene().legacy_aware_readiness(limit=100), {"passed": True, "current_clean": True}),
+            "clean_observation_verification": self._safe(lambda: CleanObservationVerifier(settings=self.settings).verify(), {"passed": False, "warnings": ["clean observation verification unavailable"]}),
             "paper_trade_readiness": self._safe(lambda: PaperTradeReadinessService(settings=self.settings).check(), {"ready": False, "decision": "NOT_READY"}),
             "safety": {
                 "passed": bool(safety.get("passed", False)),
@@ -129,6 +132,10 @@ class UnifiedReportService:
             warnings.append("Safety audit is not passing")
         if not health.get("risk_record_hygiene", {}).get("passed", True):
             warnings.append("Risk record hygiene requires review before paper-trade observation.")
+        if health.get("legacy_aware_risk_readiness", {}).get("legacy_present"):
+            warnings.append("Legacy risk records remain visible as audit warnings.")
+        if health.get("clean_observation_verification", {}).get("current_inconsistency_count", 0):
+            warnings.append("Current risk record inconsistencies block paper-trade observation readiness.")
         return warnings
 
     def _safe(self, fn, default):

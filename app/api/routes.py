@@ -34,6 +34,7 @@ from app.diagnostics.calibration_report import CalibrationReport
 from app.diagnostics.smoke_test_runner import SmokeTestRunner
 from app.exchanges.kraken_adapter import EmptyMarketDataError, InvalidSymbolError, KrakenRequestError, UnsupportedTimeframeError
 from app.journal.journal_hygiene import JournalHygiene
+from app.observation.clean_observation_verifier import CleanObservationVerifier
 from app.observation.early_recovery import EarlyRecoveryClassifier
 from app.observation.early_recovery_watchlist import EarlyRecoveryWatchlistService
 from app.observation.observation_hydration import ObservationHydrationService
@@ -1015,6 +1016,12 @@ def observation_paper_trade_readiness() -> dict:
     return PaperTradeReadinessService(settings=get_settings()).check()
 
 
+@router.get("/observation/clean-verification")
+def observation_clean_verification() -> dict:
+    """Return clean post-remediation observation verification."""
+    return CleanObservationVerifier(settings=get_settings()).verify()
+
+
 @router.get("/risk/hygiene/summary")
 def risk_hygiene_summary(limit: int = Query(default=500, ge=1, le=5000)) -> dict:
     """Return preview-only risk record hygiene summary."""
@@ -1051,6 +1058,12 @@ def risk_hygiene_remediation_preview(limit: int = Query(default=500, ge=1, le=50
 def risk_hygiene_recent_cleanliness(limit: int = Query(default=100, ge=1, le=5000)) -> dict:
     """Return recent risk record cleanliness check."""
     return RiskRecordHygiene(get_trade_journal()).validate_recent_records_only(limit=limit)
+
+
+@router.get("/risk/hygiene/legacy-aware-readiness")
+def risk_hygiene_legacy_aware_readiness(limit: int = Query(default=100, ge=1, le=5000)) -> dict:
+    """Return legacy-aware risk readiness."""
+    return RiskRecordHygiene(get_trade_journal()).legacy_aware_readiness(limit=limit)
 
 
 @router.get("/risk/readiness")
