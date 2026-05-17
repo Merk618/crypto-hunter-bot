@@ -37,6 +37,7 @@ from app.journal.journal_hygiene import JournalHygiene
 from app.observation.clean_observation_verifier import CleanObservationVerifier
 from app.observation.early_recovery import EarlyRecoveryClassifier
 from app.observation.early_recovery_watchlist import EarlyRecoveryWatchlistService
+from app.observation.fresh_observation_validator import FreshObservationValidator
 from app.observation.observation_hydration import ObservationHydrationService
 from app.observation.observation_readiness import ObservationReadinessChecker
 from app.observation.observation_session import ObservationSessionManager
@@ -1022,6 +1023,24 @@ def observation_clean_verification() -> dict:
     return CleanObservationVerifier(settings=get_settings()).verify()
 
 
+@router.get("/observation/fresh-validation")
+def observation_fresh_validation() -> dict:
+    """Return fresh observation validation."""
+    return FreshObservationValidator(settings=get_settings()).validate()
+
+
+@router.get("/observation/fresh-validation/runs")
+def observation_fresh_validation_runs() -> dict:
+    """Return fresh observation run summaries."""
+    return FreshObservationValidator(settings=get_settings()).run_summaries()
+
+
+@router.get("/observation/fresh-validation/readiness")
+def observation_fresh_validation_readiness() -> dict:
+    """Return compact fresh observation readiness."""
+    return FreshObservationValidator(settings=get_settings()).readiness()
+
+
 @router.get("/risk/hygiene/summary")
 def risk_hygiene_summary(limit: int = Query(default=500, ge=1, le=5000)) -> dict:
     """Return preview-only risk record hygiene summary."""
@@ -1070,6 +1089,12 @@ def risk_hygiene_legacy_aware_readiness(limit: int = Query(default=100, ge=1, le
 def risk_readiness(limit: int = Query(default=500, ge=1, le=5000)) -> dict:
     """Return read-only risk readiness."""
     return RiskReadiness(RiskRecordHygiene(get_trade_journal())).check(limit=limit)
+
+
+@router.get("/operator/fresh-observation-check")
+def operator_fresh_observation_check() -> dict:
+    """Return operator fresh observation check."""
+    return FreshObservationValidator(settings=get_settings()).validate()
 
 
 @router.get("/calibration/decision-gate")

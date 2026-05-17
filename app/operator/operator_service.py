@@ -11,6 +11,7 @@ from app.execution.paper_broker import PaperBroker
 from app.operator.command_summary import CommandSummaryBuilder
 from app.operator.operator_models import OperatorStatus
 from app.operator.startup_checks import StartupChecks
+from app.observation.fresh_observation_validator import FreshObservationValidator
 from app.reporting.unified_report_service import UnifiedReportService
 
 
@@ -28,6 +29,7 @@ class OperatorService:
         moomoo_client: MooMooReadOnlyClient | None = None,
         startup_checks: StartupChecks | None = None,
         command_builder: CommandSummaryBuilder | None = None,
+        fresh_validator: FreshObservationValidator | None = None,
     ) -> None:
         """Initialize operator dependencies."""
         self.settings = settings or get_settings()
@@ -39,6 +41,7 @@ class OperatorService:
         self.moomoo_client = moomoo_client or MooMooReadOnlyClient(settings=self.settings)
         self.startup_checks = startup_checks or StartupChecks(settings=self.settings, safety_audit=self.safety_audit, alert_service=self.alert_service)
         self.command_builder = command_builder or CommandSummaryBuilder()
+        self.fresh_validator = fresh_validator or FreshObservationValidator(settings=self.settings)
 
     def get_operator_status(self) -> dict:
         """Return standalone operator status."""
@@ -58,7 +61,7 @@ class OperatorService:
             journal_status={"enabled": self.settings.enable_trade_journal},
             alerts_status=alerts,
             safety_audit_passed=bool(safety.get("passed", False)),
-            warnings=warnings,
+            warnings=warnings + self._fresh_warnings(),
             blockers=blockers,
         )
         return status.to_dict()
@@ -84,7 +87,20 @@ class OperatorService:
     def get_next_recommended_actions(self) -> list[str]:
         """Return next recommended safe actions."""
         startup = self._safe(lambda: self.startup_checks.run().to_dict(), {"recommended_actions": ["Run startup checks"]})
-        return list(startup.get("recommended_actions") or ["Run /operator/startup-checks"])
+        actions = list(startup.get("recommended_actions") or ["Run /operator/startup-checks"])
+        fresh = self._safe(lambda: self.fresh_validator.validate(), {"recommended_next_actions": []})
+        actions.extend(fresh.get("recommended_next_actions") or [])
+        return list(dict.fromkeys(actions))
+
+    def _fresh_warnings(self) -> list[str]:
+        """Return fresh observation warnings for operator status."""
+        fresh = self._safe(lambda: self.fresh_validator.validate(), {})
+        warnings = list(fresh.get("warnings") or [])
+        if fresh.get("status") == "INSUFFICIENT_DATA":
+            warnings.append("Fresh observation validation needs a new observation window.")
+        if fresh.get("passed"):
+            warnings.append("Fresh validation passing does not enable paper or live trading.")
+        return warnings
 
     def _safe(self, fn, default):
         """Return default when optional data is unavailable."""

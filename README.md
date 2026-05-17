@@ -4,7 +4,7 @@ Crypto Hunter is a backend trading engine for a sophisticated crypto trading bot
 
 ## Current Phase
 
-Phase 32 clean observation verification:
+Phase 33 fresh observation validation:
 
 - Clean Python backend project
 - FastAPI health and status endpoints
@@ -40,6 +40,7 @@ Phase 32 clean observation verification:
 - Standalone operator status, startup checks, command summaries, daily briefing scripts, and local runbook endpoints
 - Risk hygiene remediation that normalizes future rejected risk decisions and classifies legacy inconsistent records with preview-only tools
 - Clean observation verification and legacy-aware readiness that treat legacy risk records as audit warnings while current inconsistencies still block
+- Fresh observation-window validation that proves post-remediation observation risk decisions persist cleanly while paper/live trading stay disabled
 - Read-only real-data validation helpers, scripts, and local Windows runbook for Kraken public data and optional MooMoo/OpenD checks
 - Production-style report filtering, journal hygiene previews, deduped daily briefings, and paper-observation readiness checks
 - Manual paper observation mode for Kraken public data, signal generation, risk evaluation, observation logs, and observation reports
@@ -871,6 +872,32 @@ Invoke-RestMethod -Uri "http://127.0.0.1:8000/observation/paper-trade-readiness"
 
 Legacy inconsistent records remain visible for audit history and warn by default. Current inconsistent records still block. Paper-trade observation remains disabled by default and is not enabled in this phase.
 
+## Phase 33 Fresh Observation Validation
+
+Phase 33 validates fresh completed observation windows after the Phase 31/32 risk hygiene fixes. It confirms that new rejected risk decisions classify as clean, current inconsistencies still block, and legacy inconsistent records remain visible as audit warnings.
+
+Docs:
+
+- [Fresh Observation Validation Phase 33](docs/FRESH_OBSERVATION_VALIDATION_PHASE33.md)
+
+Fresh validation endpoints:
+
+- `GET /observation/fresh-validation`
+- `GET /observation/fresh-validation/runs`
+- `GET /observation/fresh-validation/readiness`
+- `GET /operator/fresh-observation-check`
+
+Examples:
+
+```powershell
+Invoke-RestMethod -Uri "http://127.0.0.1:8000/observation/fresh-validation"
+Invoke-RestMethod -Uri "http://127.0.0.1:8000/observation/fresh-validation/runs"
+Invoke-RestMethod -Uri "http://127.0.0.1:8000/observation/fresh-validation/readiness"
+Invoke-RestMethod -Uri "http://127.0.0.1:8000/operator/fresh-observation-check"
+```
+
+Fresh validation can pass without enabling paper trading. Paper-trade observation remains disabled by default, and live trading remains locked.
+
 ## Safety Defaults
 
 The default configuration is intentionally conservative:
@@ -879,7 +906,7 @@ The default configuration is intentionally conservative:
 - `ENABLE_LIVE_TRADING=false`
 - `REQUIRE_LIVE_CONFIRMATION=true`
 - `LiveBroker` refuses orders unless every live safety condition passes
-- `ExecutionGuard` always reports live execution unavailable in Phase 32
+- `ExecutionGuard` always reports live execution unavailable in Phase 33
 - `SafetyAudit` must pass before future execution work
 - Exchange API secrets are never returned by API routes
 - No withdrawal functionality exists in this repository
@@ -1199,6 +1226,8 @@ Invoke-RestMethod -Uri "http://127.0.0.1:8000/risk/hygiene/remediation-preview"
 Invoke-RestMethod -Uri "http://127.0.0.1:8000/risk/hygiene/recent-cleanliness"
 Invoke-RestMethod -Uri "http://127.0.0.1:8000/risk/hygiene/legacy-aware-readiness"
 Invoke-RestMethod -Uri "http://127.0.0.1:8000/observation/clean-verification"
+Invoke-RestMethod -Uri "http://127.0.0.1:8000/observation/fresh-validation"
+Invoke-RestMethod -Uri "http://127.0.0.1:8000/operator/fresh-observation-check"
 Invoke-RestMethod -Uri "http://127.0.0.1:8000/risk/readiness"
 ```
 
@@ -1210,4 +1239,4 @@ Invoke-RestMethod -Uri "http://127.0.0.1:8000/risk/readiness"
 
 ## Live Trading Warning
 
-Live trading is locked down and not implemented in Phase 32. Kraken private access is read-only account data only. MooMoo is read-only market data only. Stock/Options Hunter, Options Scanner, alerts, unified reports, operator tooling, validation tooling, journal hygiene, risk hygiene, paper-trade readiness, observation readiness, paper observation, observation persistence, observation windows, early recovery watchlist, decision gates, and calibration are read-only or paper-only scanner/research/reporting/status/checking modes. Real order placement, live sell execution, live cancel execution, withdrawals, transfers, funding, staking, margin trading, options execution, external alert delivery, and Coinbase integration are not implemented in this phase. Reporting, alerts, operator, validation, journal hygiene, risk hygiene, paper-trade readiness, observation, observation history, observation window, early recovery, decision gate, calibration, system, diagnostics, MooMoo, Stock/Options Hunter, and Options Scanner endpoints do not perform real exchange execution. Dry-run execution is only a preview, and paper/backtest/smoke-test/scanner/reporting/validation/observation/calibration/decision/watchlist/readiness results do not guarantee live performance.
+Live trading is locked down and not implemented in Phase 33. Kraken private access is read-only account data only. MooMoo is read-only market data only. Stock/Options Hunter, Options Scanner, alerts, unified reports, operator tooling, validation tooling, journal hygiene, risk hygiene, paper-trade readiness, observation readiness, paper observation, observation persistence, observation windows, early recovery watchlist, decision gates, and calibration are read-only or paper-only scanner/research/reporting/status/checking modes. Real order placement, live sell execution, live cancel execution, withdrawals, transfers, funding, staking, margin trading, options execution, external alert delivery, and Coinbase integration are not implemented in this phase. Reporting, alerts, operator, validation, journal hygiene, risk hygiene, paper-trade readiness, observation, observation history, observation window, early recovery, decision gate, calibration, system, diagnostics, MooMoo, Stock/Options Hunter, and Options Scanner endpoints do not perform real exchange execution. Dry-run execution is only a preview, and paper/backtest/smoke-test/scanner/reporting/validation/observation/calibration/decision/watchlist/readiness results do not guarantee live performance.
