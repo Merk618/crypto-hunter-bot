@@ -183,13 +183,17 @@ class Settings(BaseSettings):
     observation_window_timeframe: str = Field(default="1h", alias="OBSERVATION_WINDOW_TIMEFRAME")
     observation_window_candle_limit: int = Field(default=250, ge=1, alias="OBSERVATION_WINDOW_CANDLE_LIMIT")
     observation_decision_gate_enabled: bool = Field(default=True, alias="OBSERVATION_DECISION_GATE_ENABLED")
-    early_recovery_watchlist_enabled: bool = Field(default=False, alias="EARLY_RECOVERY_WATCHLIST_ENABLED")
+    early_recovery_watchlist_enabled: bool = Field(default=True, alias="EARLY_RECOVERY_WATCHLIST_ENABLED")
+    early_recovery_observe_only: bool = Field(default=True, alias="EARLY_RECOVERY_OBSERVE_ONLY")
     early_recovery_min_score: int = Field(default=50, ge=0, le=100, alias="EARLY_RECOVERY_MIN_SCORE")
     early_recovery_max_score: int = Field(default=64, ge=0, le=100, alias="EARLY_RECOVERY_MAX_SCORE")
     early_recovery_require_ema200_blocker: bool = Field(default=True, alias="EARLY_RECOVERY_REQUIRE_EMA200_BLOCKER")
     early_recovery_require_momentum_evidence: bool = Field(default=True, alias="EARLY_RECOVERY_REQUIRE_MOMENTUM_EVIDENCE")
     early_recovery_min_observations: int = Field(default=3, ge=1, alias="EARLY_RECOVERY_MIN_OBSERVATIONS")
-    early_recovery_min_repeated_count: int = Field(default=2, ge=1, alias="EARLY_RECOVERY_MIN_REPEATED_COUNT")
+    early_recovery_min_repeated_count: int = Field(default=3, ge=1, alias="EARLY_RECOVERY_MIN_REPEATED_COUNT")
+    early_recovery_max_candidates: int = Field(default=10, ge=1, alias="EARLY_RECOVERY_MAX_CANDIDATES")
+    early_recovery_allow_paper_trades: bool = Field(default=False, alias="EARLY_RECOVERY_ALLOW_PAPER_TRADES")
+    early_recovery_allow_live_trades: bool = Field(default=False, alias="EARLY_RECOVERY_ALLOW_LIVE_TRADES")
     allow_paper_trade_observation: bool = Field(default=False, alias="ALLOW_PAPER_TRADE_OBSERVATION")
     allow_live_review: bool = Field(default=False, alias="ALLOW_LIVE_REVIEW")
     observation_persistence_enabled: bool = Field(default=True, alias="OBSERVATION_PERSISTENCE_ENABLED")
@@ -269,6 +273,8 @@ class Settings(BaseSettings):
             raise ValueError("Observation window paper trades require paper observation paper trades to be enabled too")
         if self.early_recovery_min_score > self.early_recovery_max_score:
             raise ValueError("EARLY_RECOVERY_MIN_SCORE cannot exceed EARLY_RECOVERY_MAX_SCORE")
+        if not self.early_recovery_observe_only or self.early_recovery_allow_paper_trades or self.early_recovery_allow_live_trades:
+            raise ValueError("Early recovery must remain observe-only with paper/live trades disabled")
         if self.allow_live_review:
             raise ValueError("ALLOW_LIVE_REVIEW must remain false in this phase")
         return self

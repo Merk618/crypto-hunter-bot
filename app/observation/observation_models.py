@@ -94,6 +94,13 @@ class ObservationReport:
     paper_trades: list[dict]
     warnings: list[str] = field(default_factory=list)
     blockers: list[str] = field(default_factory=list)
+    early_recovery_candidates: list[dict] = field(default_factory=list)
+    strongest_symbols: list[dict] = field(default_factory=list)
+    dominant_blockers: list[dict] = field(default_factory=list)
+    completed_runs_analyzed: int = 0
+    refused_runs_count: int = 0
+    total_attempted_runs: int = 0
+    notes: list[str] = field(default_factory=list)
     source: str = "crypto_hunter_observation_report_v1"
 
     def to_dict(self) -> dict:

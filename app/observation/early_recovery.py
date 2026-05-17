@@ -18,6 +18,8 @@ class EarlyRecoveryCandidate:
     latest_score: float
     average_score: float
     repeated_count: int
+    max_score: float = 0.0
+    latest_category: str = "NEUTRAL"
     momentum_evidence: list[str] = field(default_factory=list)
     blockers: list[str] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
@@ -60,7 +62,9 @@ class EarlyRecoveryClassifier:
                     symbol=symbol,
                     latest_score=scores[0],
                     average_score=round(sum(scores) / len(scores), 2),
+                    max_score=max(scores),
                     repeated_count=len(qualifying),
+                    latest_category=str(self._signal(qualifying[0]).get("category", "NEUTRAL")),
                     momentum_evidence=momentum,
                     blockers=blockers,
                     warnings=warnings,
@@ -133,4 +137,3 @@ class EarlyRecoveryClassifier:
                 seen.add(text.lower())
                 clean.append(text)
         return clean
-

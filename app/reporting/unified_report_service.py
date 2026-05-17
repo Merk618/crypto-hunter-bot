@@ -7,7 +7,8 @@ from datetime import datetime, timezone
 from app.config import Settings, get_settings
 from app.core.safety_audit import SafetyAudit
 from app.journal.journal_filters import dedupe_candidates, filter_production_records
-from app.reporting.candidate_summary import candidate_from_crypto_signal, candidate_from_ranked_option, candidate_from_stock_result
+from app.observation.early_recovery_watchlist import EarlyRecoveryWatchlistService
+from app.reporting.candidate_summary import candidate_from_crypto_signal, candidate_from_early_recovery, candidate_from_ranked_option, candidate_from_stock_result
 from app.reporting.dashboard_service import DashboardService
 from app.stock_hunter.stock_hunter_service import StockHunterService
 
@@ -41,10 +42,12 @@ class UnifiedReportService:
     def get_top_candidates(self) -> dict:
         """Return normalized top candidates across asset classes."""
         crypto = self._crypto_candidates()
+        early_recovery = self._early_recovery_candidates()
         stock = self._stock_candidates()
         options = self._option_candidates()
         return {
             "crypto": dedupe_candidates([candidate.to_dict() for candidate in crypto]),
+            "early_recovery": dedupe_candidates([candidate.to_dict() for candidate in early_recovery]),
             "stocks": dedupe_candidates([candidate.to_dict() for candidate in stock]),
             "options": dedupe_candidates([candidate.to_dict() for candidate in options]),
             "generated_at": self._now(),
@@ -106,10 +109,17 @@ class UnifiedReportService:
         filtered = [candidate for candidate in candidates if candidate.score >= self.settings.alert_min_options_score]
         return sorted(filtered, key=lambda item: item.score, reverse=True)[: self.settings.alert_max_items_per_section]
 
+    def _early_recovery_candidates(self) -> list:
+        """Read observation-only early recovery candidates."""
+        response = self._safe(lambda: EarlyRecoveryWatchlistService(settings=self.settings).get_report(), {"candidates": []})
+        records = filter_production_records(response.get("candidates", []))
+        candidates = [candidate_from_early_recovery(item) for item in records]
+        return sorted(candidates, key=lambda item: item.score, reverse=True)[: self.settings.alert_max_items_per_section]
+
     def _briefing_warnings(self, top: dict, health: dict) -> list[str]:
         """Create briefing warnings."""
         warnings: list[str] = []
-        if not top.get("crypto") and not top.get("stocks") and not top.get("options"):
+        if not top.get("crypto") and not top.get("early_recovery") and not top.get("stocks") and not top.get("options"):
             warnings.append("No candidates met alert thresholds")
         if not health.get("safety", {}).get("passed", False):
             warnings.append("Safety audit is not passing")

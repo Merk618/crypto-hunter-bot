@@ -35,6 +35,7 @@ from app.diagnostics.smoke_test_runner import SmokeTestRunner
 from app.exchanges.kraken_adapter import EmptyMarketDataError, InvalidSymbolError, KrakenRequestError, UnsupportedTimeframeError
 from app.journal.journal_hygiene import JournalHygiene
 from app.observation.early_recovery import EarlyRecoveryClassifier
+from app.observation.early_recovery_watchlist import EarlyRecoveryWatchlistService
 from app.observation.observation_hydration import ObservationHydrationService
 from app.observation.observation_readiness import ObservationReadinessChecker
 from app.observation.observation_session import ObservationSessionManager
@@ -957,6 +958,24 @@ def observation_early_recovery() -> dict:
         "action": "OBSERVE_ONLY",
         "source": "crypto_hunter_early_recovery_candidates_v1",
     }
+
+
+@router.get("/observation/early-recovery/watchlist")
+def observation_early_recovery_watchlist() -> dict:
+    """Return ranked observation-only early recovery watchlist."""
+    return EarlyRecoveryWatchlistService(settings=get_settings(), runs=_decision_runs()).get_watchlist()
+
+
+@router.get("/observation/early-recovery/report")
+def observation_early_recovery_report() -> dict:
+    """Return observation-only early recovery watchlist report."""
+    return EarlyRecoveryWatchlistService(settings=get_settings(), runs=_decision_runs()).get_report()
+
+
+@router.get("/observation/early-recovery/{symbol}")
+def observation_early_recovery_symbol(symbol: str) -> dict:
+    """Return one observation-only early recovery watchlist item."""
+    return EarlyRecoveryWatchlistService(settings=get_settings(), runs=_decision_runs()).explain_candidate(symbol)
 
 
 @router.get("/observation/history")

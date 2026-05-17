@@ -71,3 +71,30 @@ def candidate_from_ranked_option(contract: dict) -> AlertCandidate:
         },
         source="ranked_option_candidate_v1",
     )
+
+
+def candidate_from_early_recovery(item: dict) -> AlertCandidate:
+    """Normalize an early recovery watchlist item."""
+    item = normalize_reasons_warnings_blockers(item)
+    symbol = str(item.get("symbol", "UNKNOWN"))
+    blockers = list(item.get("dominant_blockers") or item.get("blockers") or [])
+    return AlertCandidate(
+        asset_class="crypto",
+        symbol=symbol,
+        title=f"{symbol} early recovery watchlist",
+        score=float(item.get("average_score", item.get("latest_score", 0)) or 0),
+        category="OBSERVE_ONLY_EARLY_RECOVERY",
+        risk_level="OBSERVE_ONLY",
+        reasons=[item.get("reason", "Repeated EMA 200-blocked recovery candidate")],
+        warnings=["OBSERVE ONLY", "NOT A TRADE SIGNAL", "EMA 200 BLOCKED"] + list(item.get("warnings") or []),
+        blockers=blockers,
+        metadata={
+            "rank": item.get("rank"),
+            "latest_score": item.get("latest_score"),
+            "average_score": item.get("average_score"),
+            "repeated_count": item.get("repeated_count"),
+            "action": item.get("action", "OBSERVE_ONLY"),
+            "trade_allowed": False,
+        },
+        source="early_recovery_candidate_v1",
+    )
