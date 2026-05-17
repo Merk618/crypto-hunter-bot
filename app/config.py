@@ -225,6 +225,20 @@ class Settings(BaseSettings):
     fresh_observation_max_current_inconsistencies: int = Field(default=0, ge=0, alias="FRESH_OBSERVATION_MAX_CURRENT_INCONSISTENCIES")
     fresh_observation_require_persisted_results: bool = Field(default=True, alias="FRESH_OBSERVATION_REQUIRE_PERSISTED_RESULTS")
     fresh_observation_require_completed_runs_only: bool = Field(default=True, alias="FRESH_OBSERVATION_REQUIRE_COMPLETED_RUNS_ONLY")
+    paper_trade_approval_gate_enabled: bool = Field(default=True, alias="PAPER_TRADE_APPROVAL_GATE_ENABLED")
+    paper_trade_approval_require_operator: bool = Field(default=True, alias="PAPER_TRADE_APPROVAL_REQUIRE_OPERATOR")
+    paper_trade_approval_require_fresh_validation: bool = Field(default=True, alias="PAPER_TRADE_APPROVAL_REQUIRE_FRESH_VALIDATION")
+    paper_trade_approval_require_clean_current_risk: bool = Field(default=True, alias="PAPER_TRADE_APPROVAL_REQUIRE_CLEAN_CURRENT_RISK")
+    paper_trade_approval_require_strong_buy: bool = Field(default=True, alias="PAPER_TRADE_APPROVAL_REQUIRE_STRONG_BUY")
+    paper_trade_approval_require_risk_approved: bool = Field(default=True, alias="PAPER_TRADE_APPROVAL_REQUIRE_RISK_APPROVED")
+    paper_trade_approval_require_live_locked: bool = Field(default=True, alias="PAPER_TRADE_APPROVAL_REQUIRE_LIVE_LOCKED")
+    paper_trade_approval_require_addorder_absent: bool = Field(default=True, alias="PAPER_TRADE_APPROVAL_REQUIRE_ADDORDER_ABSENT")
+    paper_trade_approval_min_completed_runs: int = Field(default=5, ge=1, alias="PAPER_TRADE_APPROVAL_MIN_COMPLETED_RUNS")
+    paper_trade_approval_min_observations: int = Field(default=20, ge=1, alias="PAPER_TRADE_APPROVAL_MIN_OBSERVATIONS")
+    paper_trade_approval_min_strong_buy_count: int = Field(default=1, ge=0, alias="PAPER_TRADE_APPROVAL_MIN_STRONG_BUY_COUNT")
+    paper_trade_approval_min_risk_approved_count: int = Field(default=1, ge=0, alias="PAPER_TRADE_APPROVAL_MIN_RISK_APPROVED_COUNT")
+    paper_trade_approval_allow_legacy_warnings: bool = Field(default=True, alias="PAPER_TRADE_APPROVAL_ALLOW_LEGACY_WARNINGS")
+    paper_trade_observation_enabled: bool = Field(default=False, alias="PAPER_TRADE_OBSERVATION_ENABLED")
     risk_hygiene_enabled: bool = Field(default=True, alias="RISK_HYGIENE_ENABLED")
     risk_hygiene_preview_only: bool = Field(default=True, alias="RISK_HYGIENE_PREVIEW_ONLY")
     risk_hygiene_classify_legacy_records: bool = Field(default=True, alias="RISK_HYGIENE_CLASSIFY_LEGACY_RECORDS")
@@ -314,6 +328,8 @@ class Settings(BaseSettings):
             raise ValueError("ALLOW_LIVE_REVIEW must remain false in this phase")
         if self.paper_trade_observation_allow_enable:
             raise ValueError("PAPER_TRADE_OBSERVATION_ALLOW_ENABLE must remain false in this phase")
+        if self.paper_trade_observation_enabled:
+            raise ValueError("PAPER_TRADE_OBSERVATION_ENABLED must remain false in this phase")
         if not self.risk_hygiene_preview_only or self.risk_hygiene_allow_destructive_cleanup:
             raise ValueError("Risk hygiene must remain preview-only with destructive cleanup disabled")
         return self

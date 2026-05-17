@@ -42,6 +42,7 @@ from app.observation.observation_hydration import ObservationHydrationService
 from app.observation.observation_readiness import ObservationReadinessChecker
 from app.observation.observation_session import ObservationSessionManager
 from app.observation.paper_observation_engine import PaperObservationEngine
+from app.observation.paper_trade_approval_gate import PaperTradeApprovalGate
 from app.observation.paper_trade_readiness import PaperTradeReadinessService
 from app.operator.operator_service import OperatorService
 from app.risk.risk_readiness import RiskReadiness
@@ -1017,6 +1018,24 @@ def observation_paper_trade_readiness() -> dict:
     return PaperTradeReadinessService(settings=get_settings()).check()
 
 
+@router.get("/observation/paper-trade-approval")
+def observation_paper_trade_approval() -> dict:
+    """Return paper-trade observation approval gate."""
+    return PaperTradeApprovalGate(settings=get_settings()).evaluate()
+
+
+@router.get("/observation/paper-trade-approval/checks")
+def observation_paper_trade_approval_checks() -> dict:
+    """Return paper-trade approval checks."""
+    return PaperTradeApprovalGate(settings=get_settings()).checks()
+
+
+@router.get("/observation/paper-trade-approval/package")
+def observation_paper_trade_approval_package() -> dict:
+    """Return paper-trade approval review package."""
+    return PaperTradeApprovalGate(settings=get_settings()).package()
+
+
 @router.get("/observation/clean-verification")
 def observation_clean_verification() -> dict:
     """Return clean post-remediation observation verification."""
@@ -1095,6 +1114,12 @@ def risk_readiness(limit: int = Query(default=500, ge=1, le=5000)) -> dict:
 def operator_fresh_observation_check() -> dict:
     """Return operator fresh observation check."""
     return FreshObservationValidator(settings=get_settings()).validate()
+
+
+@router.get("/operator/paper-trade-approval-review")
+def operator_paper_trade_approval_review() -> dict:
+    """Return operator paper-trade approval review package."""
+    return PaperTradeApprovalGate(settings=get_settings()).package()
 
 
 @router.get("/calibration/decision-gate")

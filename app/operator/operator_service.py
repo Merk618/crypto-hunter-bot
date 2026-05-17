@@ -12,6 +12,7 @@ from app.operator.command_summary import CommandSummaryBuilder
 from app.operator.operator_models import OperatorStatus
 from app.operator.startup_checks import StartupChecks
 from app.observation.fresh_observation_validator import FreshObservationValidator
+from app.observation.paper_trade_approval_gate import PaperTradeApprovalGate
 from app.reporting.unified_report_service import UnifiedReportService
 
 
@@ -30,6 +31,7 @@ class OperatorService:
         startup_checks: StartupChecks | None = None,
         command_builder: CommandSummaryBuilder | None = None,
         fresh_validator: FreshObservationValidator | None = None,
+        approval_gate: PaperTradeApprovalGate | None = None,
     ) -> None:
         """Initialize operator dependencies."""
         self.settings = settings or get_settings()
@@ -42,6 +44,7 @@ class OperatorService:
         self.startup_checks = startup_checks or StartupChecks(settings=self.settings, safety_audit=self.safety_audit, alert_service=self.alert_service)
         self.command_builder = command_builder or CommandSummaryBuilder()
         self.fresh_validator = fresh_validator or FreshObservationValidator(settings=self.settings)
+        self.approval_gate = approval_gate or PaperTradeApprovalGate(settings=self.settings)
 
     def get_operator_status(self) -> dict:
         """Return standalone operator status."""
@@ -90,6 +93,8 @@ class OperatorService:
         actions = list(startup.get("recommended_actions") or ["Run /operator/startup-checks"])
         fresh = self._safe(lambda: self.fresh_validator.validate(), {"recommended_next_actions": []})
         actions.extend(fresh.get("recommended_next_actions") or [])
+        approval = self._safe(lambda: self.approval_gate.evaluate(), {"recommended_next_actions": []})
+        actions.extend(approval.get("recommended_next_actions") or [])
         return list(dict.fromkeys(actions))
 
     def _fresh_warnings(self) -> list[str]:
@@ -100,6 +105,11 @@ class OperatorService:
             warnings.append("Fresh observation validation needs a new observation window.")
         if fresh.get("passed"):
             warnings.append("Fresh validation passing does not enable paper or live trading.")
+        approval = self._safe(lambda: self.approval_gate.evaluate(), {})
+        if approval.get("approval_status") in {"BLOCKED", "NOT_READY"}:
+            warnings.append("Paper-trade approval gate is not ready.")
+        if approval.get("eligible_for_operator_review"):
+            warnings.append("Paper-trade observation is eligible for operator review only; execution remains disabled.")
         return warnings
 
     def _safe(self, fn, default):

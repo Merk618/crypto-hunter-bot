@@ -10,6 +10,7 @@ from app.journal.journal_filters import dedupe_candidates, filter_production_rec
 from app.observation.clean_observation_verifier import CleanObservationVerifier
 from app.observation.early_recovery_watchlist import EarlyRecoveryWatchlistService
 from app.observation.fresh_observation_validator import FreshObservationValidator
+from app.observation.paper_trade_approval_gate import PaperTradeApprovalGate
 from app.observation.paper_trade_readiness import PaperTradeReadinessService
 from app.reporting.candidate_summary import candidate_from_crypto_signal, candidate_from_early_recovery, candidate_from_ranked_option, candidate_from_stock_result
 from app.risk.risk_record_hygiene import RiskRecordHygiene
@@ -81,6 +82,7 @@ class UnifiedReportService:
             "legacy_aware_risk_readiness": self._safe(lambda: RiskRecordHygiene().legacy_aware_readiness(limit=100), {"passed": True, "current_clean": True}),
             "clean_observation_verification": self._safe(lambda: CleanObservationVerifier(settings=self.settings).verify(), {"passed": False, "warnings": ["clean observation verification unavailable"]}),
             "fresh_observation_validation": self._safe(lambda: FreshObservationValidator(settings=self.settings).validate(), {"passed": False, "status": "UNAVAILABLE"}),
+            "paper_trade_approval_gate": self._safe(lambda: PaperTradeApprovalGate(settings=self.settings).evaluate(), {"approval_status": "NOT_READY", "eligible_for_operator_review": False, "paper_trade_observation_enabled": False}),
             "paper_trade_readiness": self._safe(lambda: PaperTradeReadinessService(settings=self.settings).check(), {"ready": False, "decision": "NOT_READY"}),
             "safety": {
                 "passed": bool(safety.get("passed", False)),
@@ -145,6 +147,11 @@ class UnifiedReportService:
             warnings.append("Fresh validation found current risk inconsistencies.")
         if fresh.get("passed"):
             warnings.append("Fresh validation passing does not enable paper or live trading.")
+        approval = health.get("paper_trade_approval_gate", {})
+        if approval.get("approval_status") in {"BLOCKED", "NOT_READY"}:
+            warnings.append("Paper-trade observation approval gate is not ready.")
+        if approval.get("eligible_for_operator_review"):
+            warnings.append("Paper-trade observation is eligible for operator review only; execution remains disabled.")
         return warnings
 
     def _safe(self, fn, default):
