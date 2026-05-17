@@ -8,7 +8,9 @@ from app.config import Settings, get_settings
 from app.core.safety_audit import SafetyAudit
 from app.journal.journal_filters import dedupe_candidates, filter_production_records
 from app.observation.early_recovery_watchlist import EarlyRecoveryWatchlistService
+from app.observation.paper_trade_readiness import PaperTradeReadinessService
 from app.reporting.candidate_summary import candidate_from_crypto_signal, candidate_from_early_recovery, candidate_from_ranked_option, candidate_from_stock_result
+from app.risk.risk_record_hygiene import RiskRecordHygiene
 from app.reporting.dashboard_service import DashboardService
 from app.stock_hunter.stock_hunter_service import StockHunterService
 
@@ -73,6 +75,8 @@ class UnifiedReportService:
         safety = self._safe(lambda: self.safety_audit.run().to_dict(), {"passed": False, "warnings": ["safety audit unavailable"]})
         return {
             "risk": risk,
+            "risk_record_hygiene": self._safe(lambda: RiskRecordHygiene().summary(limit=100), {"passed": True, "inconsistency_count": 0}),
+            "paper_trade_readiness": self._safe(lambda: PaperTradeReadinessService(settings=self.settings).check(), {"ready": False, "decision": "NOT_READY"}),
             "safety": {
                 "passed": bool(safety.get("passed", False)),
                 "live_trading_locked": bool(safety.get("live_trading_locked", True)),
@@ -123,6 +127,8 @@ class UnifiedReportService:
             warnings.append("No candidates met alert thresholds")
         if not health.get("safety", {}).get("passed", False):
             warnings.append("Safety audit is not passing")
+        if not health.get("risk_record_hygiene", {}).get("passed", True):
+            warnings.append("Risk record hygiene requires review before paper-trade observation.")
         return warnings
 
     def _safe(self, fn, default):

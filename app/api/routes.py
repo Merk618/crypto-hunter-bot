@@ -40,7 +40,10 @@ from app.observation.observation_hydration import ObservationHydrationService
 from app.observation.observation_readiness import ObservationReadinessChecker
 from app.observation.observation_session import ObservationSessionManager
 from app.observation.paper_observation_engine import PaperObservationEngine
+from app.observation.paper_trade_readiness import PaperTradeReadinessService
 from app.operator.operator_service import OperatorService
+from app.risk.risk_readiness import RiskReadiness
+from app.risk.risk_record_hygiene import RiskRecordHygiene
 from app.storage.database import init_db
 from app.stock_hunter.stock_hunter_service import StockHunterService
 from app.reporting.unified_report_service import UnifiedReportService
@@ -1004,6 +1007,31 @@ def observation_history_results(limit: int = Query(default=500, ge=1, le=5000), 
 def observation_history_summary(limit: int = Query(default=500, ge=1, le=5000)) -> dict:
     """Return persisted observation history summary."""
     return ObservationHydrationService(settings=get_settings()).history_summary(limit=limit)
+
+
+@router.get("/observation/paper-trade-readiness")
+def observation_paper_trade_readiness() -> dict:
+    """Return read-only paper-trade observation readiness."""
+    return PaperTradeReadinessService(settings=get_settings()).check()
+
+
+@router.get("/risk/hygiene/summary")
+def risk_hygiene_summary(limit: int = Query(default=500, ge=1, le=5000)) -> dict:
+    """Return preview-only risk record hygiene summary."""
+    return RiskRecordHygiene(get_trade_journal()).summary(limit=limit)
+
+
+@router.get("/risk/hygiene/inconsistencies")
+def risk_hygiene_inconsistencies(limit: int = Query(default=500, ge=1, le=5000)) -> dict:
+    """Return preview-only risk record inconsistencies."""
+    inconsistencies = RiskRecordHygiene(get_trade_journal()).scan_records(limit=limit)
+    return {"inconsistencies": [item.to_dict() for item in inconsistencies], "count": len(inconsistencies), "preview_only": True, "source": "crypto_hunter_risk_inconsistencies_v1"}
+
+
+@router.get("/risk/readiness")
+def risk_readiness(limit: int = Query(default=500, ge=1, le=5000)) -> dict:
+    """Return read-only risk readiness."""
+    return RiskReadiness(RiskRecordHygiene(get_trade_journal())).check(limit=limit)
 
 
 @router.get("/calibration/decision-gate")

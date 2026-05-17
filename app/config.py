@@ -201,6 +201,18 @@ class Settings(BaseSettings):
     observation_history_limit: int = Field(default=500, ge=1, alias="OBSERVATION_HISTORY_LIMIT")
     observation_decision_gate_use_persisted_history: bool = Field(default=True, alias="OBSERVATION_DECISION_GATE_USE_PERSISTED_HISTORY")
     observation_require_completed_runs_only: bool = Field(default=True, alias="OBSERVATION_REQUIRE_COMPLETED_RUNS_ONLY")
+    paper_trade_observation_readiness_enabled: bool = Field(default=True, alias="PAPER_TRADE_OBSERVATION_READINESS_ENABLED")
+    paper_trade_observation_allow_enable: bool = Field(default=False, alias="PAPER_TRADE_OBSERVATION_ALLOW_ENABLE")
+    paper_trade_observation_require_operator_approval: bool = Field(default=True, alias="PAPER_TRADE_OBSERVATION_REQUIRE_OPERATOR_APPROVAL")
+    paper_trade_observation_min_completed_runs: int = Field(default=5, ge=1, alias="PAPER_TRADE_OBSERVATION_MIN_COMPLETED_RUNS")
+    paper_trade_observation_min_observations: int = Field(default=20, ge=1, alias="PAPER_TRADE_OBSERVATION_MIN_OBSERVATIONS")
+    paper_trade_observation_require_strong_buy: bool = Field(default=True, alias="PAPER_TRADE_OBSERVATION_REQUIRE_STRONG_BUY")
+    paper_trade_observation_require_risk_approval: bool = Field(default=True, alias="PAPER_TRADE_OBSERVATION_REQUIRE_RISK_APPROVAL")
+    paper_trade_observation_require_no_risk_record_inconsistencies: bool = Field(default=True, alias="PAPER_TRADE_OBSERVATION_REQUIRE_NO_RISK_RECORD_INCONSISTENCIES")
+    paper_trade_observation_require_safety_audit: bool = Field(default=True, alias="PAPER_TRADE_OBSERVATION_REQUIRE_SAFETY_AUDIT")
+    paper_trade_observation_require_live_locked: bool = Field(default=True, alias="PAPER_TRADE_OBSERVATION_REQUIRE_LIVE_LOCKED")
+    paper_trade_observation_require_addorder_absent: bool = Field(default=True, alias="PAPER_TRADE_OBSERVATION_REQUIRE_ADDORDER_ABSENT")
+    paper_trade_observation_max_recent_risk_inconsistencies: int = Field(default=0, ge=0, alias="PAPER_TRADE_OBSERVATION_MAX_RECENT_RISK_INCONSISTENCIES")
     coinbase_api_key: str = Field(default="", alias="COINBASE_API_KEY")
     coinbase_api_secret: str = Field(default="", alias="COINBASE_API_SECRET")
     discord_webhook_url: str = Field(default="", alias="DISCORD_WEBHOOK_URL")
@@ -277,6 +289,8 @@ class Settings(BaseSettings):
             raise ValueError("Early recovery must remain observe-only with paper/live trades disabled")
         if self.allow_live_review:
             raise ValueError("ALLOW_LIVE_REVIEW must remain false in this phase")
+        if self.paper_trade_observation_allow_enable:
+            raise ValueError("PAPER_TRADE_OBSERVATION_ALLOW_ENABLE must remain false in this phase")
         return self
 
     def has_exchange_api_keys(self) -> bool:
