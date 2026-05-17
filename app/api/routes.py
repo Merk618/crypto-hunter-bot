@@ -7,6 +7,7 @@ from app.bot.paper_trading_bot import PaperTradingBotError
 from app.alerts.alert_service import AlertService
 from app.backtesting.backtest_engine import BacktestDataError, BacktestEngine
 from app.calibration.strategy_calibration_report import StrategyCalibrationReportBuilder
+from app.calibration.strategy_decision_gate import StrategyDecisionGate
 from app.config import get_settings
 from app.connectors.moomoo.moomoo_config import get_moomoo_config
 from app.connectors.moomoo.moomoo_market_data import MooMooMarketData
@@ -33,6 +34,7 @@ from app.diagnostics.calibration_report import CalibrationReport
 from app.diagnostics.smoke_test_runner import SmokeTestRunner
 from app.exchanges.kraken_adapter import EmptyMarketDataError, InvalidSymbolError, KrakenRequestError, UnsupportedTimeframeError
 from app.journal.journal_hygiene import JournalHygiene
+from app.observation.early_recovery import EarlyRecoveryClassifier
 from app.observation.observation_readiness import ObservationReadinessChecker
 from app.observation.observation_session import ObservationSessionManager
 from app.observation.paper_observation_engine import PaperObservationEngine
@@ -902,6 +904,35 @@ def observation_window_summary() -> dict:
 def observation_window_reset() -> dict:
     """Reset observation window state."""
     return _observation_session_manager.reset_session()
+
+
+def _decision_runs() -> list[dict]:
+    """Return the best available observation runs for decision endpoints."""
+    return _observation_session_manager.session_runs or _paper_observation_engine.recent_runs
+
+
+@router.get("/observation/decision-gate")
+def observation_decision_gate() -> dict:
+    """Return read-only observation strategy decision gate."""
+    return StrategyDecisionGate(settings=get_settings(), safety_audit=SafetyAudit(settings=get_settings())).evaluate(_decision_runs()).to_dict()
+
+
+@router.get("/observation/early-recovery")
+def observation_early_recovery() -> dict:
+    """Return observation-only early recovery candidates."""
+    candidates = EarlyRecoveryClassifier(settings=get_settings()).classify_runs(_decision_runs())
+    return {
+        "enabled": get_settings().early_recovery_watchlist_enabled,
+        "candidates": [candidate.to_dict() for candidate in candidates],
+        "action": "OBSERVE_ONLY",
+        "source": "crypto_hunter_early_recovery_candidates_v1",
+    }
+
+
+@router.get("/calibration/decision-gate")
+def calibration_decision_gate() -> dict:
+    """Return read-only calibration decision gate."""
+    return StrategyDecisionGate(settings=get_settings(), safety_audit=SafetyAudit(settings=get_settings())).evaluate(_decision_runs()).to_dict()
 
 
 @router.get("/diagnostics/smoke-test")

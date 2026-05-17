@@ -23,6 +23,9 @@ class ObservationWindowSummary:
 
     session_id: str
     runs_analyzed: int
+    completed_runs_analyzed: int
+    refused_runs_count: int
+    total_attempted_runs: int
     symbols_observed: list[str]
     total_signals: int
     category_distribution: dict
@@ -47,7 +50,9 @@ class ObservationWindowSummary:
 def build_observation_window_summary(session_id: str, runs: list[dict], settings: Settings | None = None) -> ObservationWindowSummary:
     """Build a summary from observation window runs."""
     settings = settings or get_settings()
-    results = flatten_results(runs)
+    completed_runs = [run for run in runs if run.get("status", "completed") == "completed"]
+    refused_runs = [run for run in runs if run.get("status") == "refused"]
+    results = flatten_results(completed_runs)
     scores = summarize_scores_by_symbol(results)
     strongest = sorted(
         [result for result in results if result.get("signal")],
@@ -56,12 +61,15 @@ def build_observation_window_summary(session_id: str, runs: list[dict], settings
     )
     warnings = []
     blockers = []
-    for run in runs:
+    for run in completed_runs:
         warnings.extend(run.get("warnings") or [])
         blockers.extend(run.get("blockers") or [])
     return ObservationWindowSummary(
         session_id=session_id,
-        runs_analyzed=len(runs),
+        runs_analyzed=len(completed_runs),
+        completed_runs_analyzed=len(completed_runs),
+        refused_runs_count=len(refused_runs),
+        total_attempted_runs=len(runs),
         symbols_observed=sorted({str(result.get("symbol")) for result in results if result.get("symbol")}),
         total_signals=sum(1 for result in results if result.get("signal")),
         category_distribution=summarize_categories(results),
@@ -71,10 +79,9 @@ def build_observation_window_summary(session_id: str, runs: list[dict], settings
         warning_distribution=summarize_warnings(results),
         strongest_observed_signal=strongest[0] if strongest else None,
         repeated_watchlist_candidates=detect_repeated_watchlist_candidates(results),
-        paper_trades_created=sum(int(run.get("paper_trades_created", 0) or 0) for run in runs),
-        calibration_readiness=calculate_calibration_readiness(len(runs), settings.observation_window_min_runs_for_summary),
+        paper_trades_created=sum(int(run.get("paper_trades_created", 0) or 0) for run in completed_runs),
+        calibration_readiness=calculate_calibration_readiness(len(completed_runs), settings.observation_window_min_runs_for_summary),
         warnings=list(dict.fromkeys(str(item) for item in warnings if item)),
         blockers=list(dict.fromkeys(str(item) for item in blockers if item)),
         metrics_by_symbol=[metric.to_dict() for metric in build_symbol_metrics(results)],
     )
-

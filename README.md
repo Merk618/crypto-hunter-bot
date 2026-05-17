@@ -4,7 +4,7 @@ Crypto Hunter is a backend trading engine for a sophisticated crypto trading bot
 
 ## Current Phase
 
-Phase 26 longer paper observation windows:
+Phase 27 observation decision gate:
 
 - Clean Python backend project
 - FastAPI health and status endpoints
@@ -43,6 +43,7 @@ Phase 26 longer paper observation windows:
 - Manual paper observation mode for Kraken public data, signal generation, risk evaluation, observation logs, and observation reports
 - Read-only strategy calibration reports from paper observation results, including EMA 200 blocker analysis, low-score bottleneck detection, and threshold recommendations that cannot auto-apply
 - Longer manual paper observation sessions that collect multiple observation runs, summarize repeated blockers, track watchlist candidates, and calculate calibration readiness
+- Observation-window accounting fixes, observation-only early recovery classifier, and read-only strategy decision gate for next-step recommendations
 
 Live trading and real exchange order execution are not implemented yet. Crypto Hunter remains standalone-first; YucaTanaTrades frontend integration comes later after local reliability is proven.
 
@@ -712,6 +713,30 @@ Invoke-RestMethod -Uri "http://127.0.0.1:8000/observation/window/summary"
 
 Observation windows do not run an infinite loop inside FastAPI requests. Paper trades remain disabled unless both config and request explicitly allow them, and even then only the paper broker can be used.
 
+## Phase 27 Observation Decision Gate
+
+Phase 27 fixes refused-run accounting and adds a read-only decision gate that can recommend `KEEP_OBSERVING`, `ADD_EARLY_RECOVERY_WATCHLIST`, or future paper-only review states without changing thresholds or enabling trading.
+
+Docs:
+
+- [Observation Decision Gate Phase 27](docs/OBSERVATION_DECISION_GATE_PHASE27.md)
+
+Decision endpoints:
+
+- `GET /observation/decision-gate`
+- `GET /observation/early-recovery`
+- `GET /calibration/decision-gate`
+
+Examples:
+
+```powershell
+Invoke-RestMethod -Uri "http://127.0.0.1:8000/observation/decision-gate"
+Invoke-RestMethod -Uri "http://127.0.0.1:8000/observation/early-recovery"
+Invoke-RestMethod -Uri "http://127.0.0.1:8000/calibration/decision-gate"
+```
+
+For the current 20-observation EMA 200-blocked pattern, the intended recommendation is observation-only early recovery tagging. EMA 200 remains required for trade execution, paper-trade observation remains disabled by default, and live review remains blocked.
+
 ## Safety Defaults
 
 The default configuration is intentionally conservative:
@@ -720,7 +745,7 @@ The default configuration is intentionally conservative:
 - `ENABLE_LIVE_TRADING=false`
 - `REQUIRE_LIVE_CONFIRMATION=true`
 - `LiveBroker` refuses orders unless every live safety condition passes
-- `ExecutionGuard` always reports live execution unavailable in Phase 26
+- `ExecutionGuard` always reports live execution unavailable in Phase 27
 - `SafetyAudit` must pass before future execution work
 - Exchange API secrets are never returned by API routes
 - No withdrawal functionality exists in this repository
@@ -1005,6 +1030,14 @@ Invoke-RestMethod -Method Post -Uri "http://127.0.0.1:8000/observation/window/ru
 Invoke-RestMethod -Uri "http://127.0.0.1:8000/observation/window/summary"
 ```
 
+Decision gate examples:
+
+```powershell
+Invoke-RestMethod -Uri "http://127.0.0.1:8000/observation/decision-gate"
+Invoke-RestMethod -Uri "http://127.0.0.1:8000/observation/early-recovery"
+Invoke-RestMethod -Uri "http://127.0.0.1:8000/calibration/decision-gate"
+```
+
 ## Run Tests
 
 ```powershell
@@ -1013,4 +1046,4 @@ Invoke-RestMethod -Uri "http://127.0.0.1:8000/observation/window/summary"
 
 ## Live Trading Warning
 
-Live trading is locked down and not implemented in Phase 26. Kraken private access is read-only account data only. MooMoo is read-only market data only. Stock/Options Hunter, Options Scanner, alerts, unified reports, operator tooling, validation tooling, journal hygiene, observation readiness, paper observation, observation windows, and calibration are read-only or paper-only scanner/research/reporting/status/checking modes. Real order placement, live sell execution, live cancel execution, withdrawals, transfers, funding, staking, margin trading, options execution, external alert delivery, and Coinbase integration are not implemented in this phase. Reporting, alerts, operator, validation, journal hygiene, observation, observation window, calibration, system, diagnostics, MooMoo, Stock/Options Hunter, and Options Scanner endpoints do not perform real exchange execution. Dry-run execution is only a preview, and paper/backtest/smoke-test/scanner/reporting/validation/observation/calibration results do not guarantee live performance.
+Live trading is locked down and not implemented in Phase 27. Kraken private access is read-only account data only. MooMoo is read-only market data only. Stock/Options Hunter, Options Scanner, alerts, unified reports, operator tooling, validation tooling, journal hygiene, observation readiness, paper observation, observation windows, early recovery, decision gates, and calibration are read-only or paper-only scanner/research/reporting/status/checking modes. Real order placement, live sell execution, live cancel execution, withdrawals, transfers, funding, staking, margin trading, options execution, external alert delivery, and Coinbase integration are not implemented in this phase. Reporting, alerts, operator, validation, journal hygiene, observation, observation window, early recovery, decision gate, calibration, system, diagnostics, MooMoo, Stock/Options Hunter, and Options Scanner endpoints do not perform real exchange execution. Dry-run execution is only a preview, and paper/backtest/smoke-test/scanner/reporting/validation/observation/calibration/decision results do not guarantee live performance.

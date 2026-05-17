@@ -182,6 +182,16 @@ class Settings(BaseSettings):
     observation_window_symbols: list[str] = Field(default_factory=lambda: ["BTC/USD", "ETH/USD", "SOL/USD", "SUI/USD"], alias="OBSERVATION_WINDOW_SYMBOLS")
     observation_window_timeframe: str = Field(default="1h", alias="OBSERVATION_WINDOW_TIMEFRAME")
     observation_window_candle_limit: int = Field(default=250, ge=1, alias="OBSERVATION_WINDOW_CANDLE_LIMIT")
+    observation_decision_gate_enabled: bool = Field(default=True, alias="OBSERVATION_DECISION_GATE_ENABLED")
+    early_recovery_watchlist_enabled: bool = Field(default=False, alias="EARLY_RECOVERY_WATCHLIST_ENABLED")
+    early_recovery_min_score: int = Field(default=50, ge=0, le=100, alias="EARLY_RECOVERY_MIN_SCORE")
+    early_recovery_max_score: int = Field(default=64, ge=0, le=100, alias="EARLY_RECOVERY_MAX_SCORE")
+    early_recovery_require_ema200_blocker: bool = Field(default=True, alias="EARLY_RECOVERY_REQUIRE_EMA200_BLOCKER")
+    early_recovery_require_momentum_evidence: bool = Field(default=True, alias="EARLY_RECOVERY_REQUIRE_MOMENTUM_EVIDENCE")
+    early_recovery_min_observations: int = Field(default=3, ge=1, alias="EARLY_RECOVERY_MIN_OBSERVATIONS")
+    early_recovery_min_repeated_count: int = Field(default=2, ge=1, alias="EARLY_RECOVERY_MIN_REPEATED_COUNT")
+    allow_paper_trade_observation: bool = Field(default=False, alias="ALLOW_PAPER_TRADE_OBSERVATION")
+    allow_live_review: bool = Field(default=False, alias="ALLOW_LIVE_REVIEW")
     coinbase_api_key: str = Field(default="", alias="COINBASE_API_KEY")
     coinbase_api_secret: str = Field(default="", alias="COINBASE_API_SECRET")
     discord_webhook_url: str = Field(default="", alias="DISCORD_WEBHOOK_URL")
@@ -252,6 +262,10 @@ class Settings(BaseSettings):
             raise ValueError("OBSERVATION_WINDOW_READ_ONLY must remain true in this phase")
         if self.observation_window_allow_paper_trades and not self.paper_observation_allow_paper_trades:
             raise ValueError("Observation window paper trades require paper observation paper trades to be enabled too")
+        if self.early_recovery_min_score > self.early_recovery_max_score:
+            raise ValueError("EARLY_RECOVERY_MIN_SCORE cannot exceed EARLY_RECOVERY_MAX_SCORE")
+        if self.allow_live_review:
+            raise ValueError("ALLOW_LIVE_REVIEW must remain false in this phase")
         return self
 
     def has_exchange_api_keys(self) -> bool:

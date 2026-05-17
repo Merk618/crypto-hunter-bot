@@ -62,8 +62,8 @@ class ObservationAnalyzer:
             latest_score=scores[0] if scores else None,
             categories_count=categories,
             risk_levels_count=dict(risks),
-            most_common_blockers=[{"text": text, "count": count} for text, count in blockers.most_common(5)] if isinstance(blockers, Counter) else [],
-            most_common_warnings=[{"text": text, "count": count} for text, count in warnings.most_common(5)] if isinstance(warnings, Counter) else [],
+            most_common_blockers=[{"text": text, "count": count} for text, count in Counter(blockers).most_common(5)],
+            most_common_warnings=[{"text": text, "count": count} for text, count in Counter(warnings).most_common(5)],
             ema_200_blocker_rate=round(ema_rate, 4),
             low_score_rate=round(low_rate, 4),
             strong_buy_count=categories.get("STRONG_BUY", 0),
@@ -80,15 +80,15 @@ class ObservationAnalyzer:
 
     def calculate_blocker_distribution(self, results: list[dict]) -> Counter:
         """Count deduped blocker text."""
-        return Counter(blocker for result in results for blocker in self._deduped_texts(self._blockers(result)))
+        return dict(Counter(blocker for result in results for blocker in self._deduped_texts(self._blockers(result))))
 
     def calculate_warning_distribution(self, results: list[dict]) -> Counter:
         """Count deduped warning text."""
-        return Counter(warning for result in results for warning in self._deduped_texts(self._warnings(result)))
+        return dict(Counter(warning for result in results for warning in self._deduped_texts(self._warnings(result))))
 
     def detect_common_blockers(self, results: list[dict]) -> list[dict]:
         """Return common blockers as dictionaries."""
-        return [{"text": text, "count": count} for text, count in self.calculate_blocker_distribution(results).most_common()]
+        return [{"text": text, "count": count} for text, count in Counter(self.calculate_blocker_distribution(results)).most_common()]
 
     def detect_score_bottlenecks(self, results: list[dict]) -> dict:
         """Return score bottleneck summary."""
@@ -202,4 +202,3 @@ class ObservationAnalyzer:
         if any(summary.ema_200_blocker_rate >= self.settings.calibration_warn_ema200_blocker_rate for summary in summaries):
             return "EMA 200 trend filtering is a dominant bottleneck. Keep trade filters conservative and consider an observation-only early recovery tag."
         return "Calibration sample is usable for review, but recommendations remain read-only and require manual approval."
-

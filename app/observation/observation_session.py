@@ -20,6 +20,7 @@ class ObservationSession:
     status: str
     target_runs: int
     completed_runs: int
+    refused_runs: int
     symbols: list[str]
     timeframe: str
     allow_paper_trades: bool = False
@@ -57,6 +58,7 @@ class ObservationSessionManager:
             status="running",
             target_runs=target_runs or self.settings.observation_window_default_runs,
             completed_runs=0,
+            refused_runs=0,
             symbols=self.settings.observation_window_symbols,
             timeframe=self.settings.observation_window_timeframe,
             allow_paper_trades=allowed_paper,
@@ -81,9 +83,11 @@ class ObservationSessionManager:
             "read_only": self.settings.observation_window_read_only,
             "paper_trades_allowed_by_config": self.settings.observation_window_allow_paper_trades,
             "session": self.session.to_dict() if self.session else None,
-            "runs_collected": len(self.session_runs),
+            "runs_collected": self._completed_count(),
+            "refused_runs": self._refused_count(),
+            "total_attempted_runs": len(self.session_runs),
             "seconds_until_next_run": self._seconds_until_next_run(),
-            "calibration_readiness": calculate_calibration_readiness(len(self.session_runs), self.settings.observation_window_min_runs_for_summary),
+            "calibration_readiness": calculate_calibration_readiness(self._completed_count(), self.settings.observation_window_min_runs_for_summary),
             "source": "crypto_hunter_observation_window_status_v1",
         }
 
@@ -95,12 +99,15 @@ class ObservationSessionManager:
             return {"status": "refused", "blockers": ["observation session already completed"], "source": "crypto_hunter_observation_window_run_v1"}
         if not ignore_interval and self._seconds_until_next_run() > 0:
             return {"status": "refused", "blockers": ["observation window interval has not elapsed"], "seconds_until_next_run": self._seconds_until_next_run(), "source": "crypto_hunter_observation_window_run_v1"}
+        if ignore_interval:
+            self._bypass_lower_scheduler_once()
         allow_paper = bool(self.session and self.session.allow_paper_trades)
         run = self.observation_engine.run_once(manual_run=manual_run, allow_paper_trades=allow_paper)
         self.last_window_run_at = self.now_fn()
         self.session_runs.insert(0, run)
         if self.session:
-            self.session.completed_runs = len(self.session_runs)
+            self.session.completed_runs = self._completed_count()
+            self.session.refused_runs = self._refused_count()
             if self.session.completed_runs >= self.session.target_runs:
                 self.session.status = "completed"
                 self.session.completed_at = self.now_fn().isoformat()
@@ -128,3 +135,20 @@ class ObservationSessionManager:
         elapsed = self.now_fn() - self.last_window_run_at
         return max(0, int((interval - elapsed).total_seconds()))
 
+    def _completed_count(self) -> int:
+        """Return completed observation run count."""
+        return sum(1 for run in self.session_runs if run.get("status") == "completed")
+
+    def _refused_count(self) -> int:
+        """Return refused observation run count."""
+        return sum(1 for run in self.session_runs if run.get("status") == "refused")
+
+    def _bypass_lower_scheduler_once(self) -> None:
+        """Clear lower-level observation scheduler throttle for an explicit forced run."""
+        scheduler = getattr(self.observation_engine, "scheduler", None)
+        if scheduler is None:
+            return
+        if hasattr(scheduler, "last_run_started_at"):
+            scheduler.last_run_started_at = None
+        if hasattr(scheduler, "is_running"):
+            scheduler.is_running = False
