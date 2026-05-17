@@ -213,6 +213,13 @@ class Settings(BaseSettings):
     paper_trade_observation_require_live_locked: bool = Field(default=True, alias="PAPER_TRADE_OBSERVATION_REQUIRE_LIVE_LOCKED")
     paper_trade_observation_require_addorder_absent: bool = Field(default=True, alias="PAPER_TRADE_OBSERVATION_REQUIRE_ADDORDER_ABSENT")
     paper_trade_observation_max_recent_risk_inconsistencies: int = Field(default=0, ge=0, alias="PAPER_TRADE_OBSERVATION_MAX_RECENT_RISK_INCONSISTENCIES")
+    risk_hygiene_enabled: bool = Field(default=True, alias="RISK_HYGIENE_ENABLED")
+    risk_hygiene_preview_only: bool = Field(default=True, alias="RISK_HYGIENE_PREVIEW_ONLY")
+    risk_hygiene_classify_legacy_records: bool = Field(default=True, alias="RISK_HYGIENE_CLASSIFY_LEGACY_RECORDS")
+    risk_hygiene_ignore_legacy_in_readiness: bool = Field(default=False, alias="RISK_HYGIENE_IGNORE_LEGACY_IN_READINESS")
+    risk_hygiene_require_clean_recent_records: bool = Field(default=True, alias="RISK_HYGIENE_REQUIRE_CLEAN_RECENT_RECORDS")
+    risk_hygiene_recent_record_limit: int = Field(default=100, ge=1, alias="RISK_HYGIENE_RECENT_RECORD_LIMIT")
+    risk_hygiene_allow_destructive_cleanup: bool = Field(default=False, alias="RISK_HYGIENE_ALLOW_DESTRUCTIVE_CLEANUP")
     coinbase_api_key: str = Field(default="", alias="COINBASE_API_KEY")
     coinbase_api_secret: str = Field(default="", alias="COINBASE_API_SECRET")
     discord_webhook_url: str = Field(default="", alias="DISCORD_WEBHOOK_URL")
@@ -291,6 +298,8 @@ class Settings(BaseSettings):
             raise ValueError("ALLOW_LIVE_REVIEW must remain false in this phase")
         if self.paper_trade_observation_allow_enable:
             raise ValueError("PAPER_TRADE_OBSERVATION_ALLOW_ENABLE must remain false in this phase")
+        if not self.risk_hygiene_preview_only or self.risk_hygiene_allow_destructive_cleanup:
+            raise ValueError("Risk hygiene must remain preview-only with destructive cleanup disabled")
         return self
 
     def has_exchange_api_keys(self) -> bool:

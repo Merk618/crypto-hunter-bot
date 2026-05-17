@@ -1028,6 +1028,31 @@ def risk_hygiene_inconsistencies(limit: int = Query(default=500, ge=1, le=5000))
     return {"inconsistencies": [item.to_dict() for item in inconsistencies], "count": len(inconsistencies), "preview_only": True, "source": "crypto_hunter_risk_inconsistencies_v1"}
 
 
+@router.get("/risk/hygiene/classification")
+def risk_hygiene_classification(limit: int = Query(default=500, ge=1, le=5000)) -> dict:
+    """Return preview-only risk record classifications."""
+    hygiene = RiskRecordHygiene(get_trade_journal())
+    records = get_trade_journal().get_recent_risk_decisions(limit=limit)
+    return {
+        "classification": [hygiene.classify_risk_record(record) for record in records],
+        "summary": hygiene.summarize_by_classification(records),
+        "preview_only": True,
+        "source": "crypto_hunter_risk_hygiene_classification_v1",
+    }
+
+
+@router.get("/risk/hygiene/remediation-preview")
+def risk_hygiene_remediation_preview(limit: int = Query(default=500, ge=1, le=5000)) -> dict:
+    """Return read-only risk hygiene remediation preview."""
+    return RiskRecordHygiene(get_trade_journal()).preview_remediation_plan(limit=limit)
+
+
+@router.get("/risk/hygiene/recent-cleanliness")
+def risk_hygiene_recent_cleanliness(limit: int = Query(default=100, ge=1, le=5000)) -> dict:
+    """Return recent risk record cleanliness check."""
+    return RiskRecordHygiene(get_trade_journal()).validate_recent_records_only(limit=limit)
+
+
 @router.get("/risk/readiness")
 def risk_readiness(limit: int = Query(default=500, ge=1, le=5000)) -> dict:
     """Return read-only risk readiness."""

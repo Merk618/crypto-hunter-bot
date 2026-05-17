@@ -20,7 +20,7 @@ from app.storage.models import (
     ScanResultRecord,
     SignalRecord,
 )
-from app.storage.serializers import dumps_json, loads_json, to_plain_data
+from app.storage.serializers import dumps_json, loads_json, normalize_rejected_risk_payload, to_plain_data
 
 
 class TradeJournal:
@@ -66,7 +66,7 @@ class TradeJournal:
 
     def record_risk_decision(self, risk_decision) -> dict:
         """Record a risk decision."""
-        data = to_plain_data(risk_decision)
+        data = normalize_rejected_risk_payload(to_plain_data(risk_decision))
         record = RiskDecisionRecord(
             symbol=data.get("symbol", ""),
             side=data.get("side", ""),

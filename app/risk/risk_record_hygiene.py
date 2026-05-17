@@ -5,6 +5,8 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass, field
 from typing import Any
 
+from app.config import Settings, get_settings
+from app.storage.serializers import normalize_rejected_risk_payload
 from app.storage.trade_journal import TradeJournal
 
 
@@ -28,9 +30,10 @@ class RiskRecordInconsistency:
 class RiskRecordHygiene:
     """Preview-only risk decision hygiene scanner."""
 
-    def __init__(self, journal: TradeJournal | None = None) -> None:
+    def __init__(self, journal: TradeJournal | None = None, settings: Settings | None = None) -> None:
         """Initialize hygiene scanner."""
         self.journal = journal or TradeJournal()
+        self.settings = settings or get_settings()
 
     def scan_records(self, records: list[dict] | None = None, limit: int = 500) -> list[RiskRecordInconsistency]:
         """Scan provided or journaled risk records."""
@@ -47,9 +50,99 @@ class RiskRecordHygiene:
             "passed": not inconsistencies,
             "inconsistency_count": len(inconsistencies),
             "inconsistencies": [item.to_dict() for item in inconsistencies],
+            "classification": self.summarize_by_classification(records=records, limit=limit),
             "preview_only": True,
             "source": "crypto_hunter_risk_record_hygiene_v1",
         }
+
+    def classify_risk_record(self, record: dict) -> dict:
+        """Classify one risk record without mutating it."""
+        issues = self._scan_one(record)
+        approved = bool(record.get("approved", False))
+        if not str(record.get("symbol", "")).strip() or str(record.get("side", "")).strip().lower() not in {"buy", "sell"}:
+            classification = "MALFORMED_RECORD"
+        elif issues and not approved and self.is_legacy_inconsistency(record):
+            classification = "LEGACY_INCONSISTENT_REJECTED_RECORD"
+        elif issues and not approved:
+            classification = "CURRENT_INCONSISTENT_REJECTED_RECORD"
+        elif approved and not issues:
+            classification = "CLEAN_APPROVED_RECORD"
+        elif not approved and not issues:
+            classification = "CLEAN_REJECTED_RECORD"
+        else:
+            classification = "MALFORMED_RECORD"
+        return {
+            "record_id": record.get("id"),
+            "symbol": record.get("symbol"),
+            "classification": classification,
+            "issues": [issue.to_dict() for issue in issues],
+            "recommended_action": self._recommendation(classification),
+            "preview_only": True,
+        }
+
+    def summarize_by_classification(self, records: list[dict] | None = None, limit: int | None = None) -> dict:
+        """Summarize risk records by classification."""
+        if records is None:
+            records = self.journal.get_recent_risk_decisions(limit=limit or self.settings.risk_hygiene_recent_record_limit)
+        counts: dict[str, int] = {}
+        for record in records:
+            classification = self.classify_risk_record(record)["classification"]
+            counts[classification] = counts.get(classification, 0) + 1
+        return counts
+
+    def preview_remediation_plan(self, records: list[dict] | None = None, limit: int | None = None) -> dict:
+        """Return a read-only remediation preview."""
+        if records is None:
+            records = self.journal.get_recent_risk_decisions(limit=limit or self.settings.risk_hygiene_recent_record_limit)
+        classified = [self.classify_risk_record(record) for record in records]
+        return {
+            "preview_only": True,
+            "destructive_cleanup_allowed": False,
+            "classifications": classified,
+            "summary": self.summarize_by_classification(records),
+            "recommended_actions": [
+                "Keep legacy records for audit history.",
+                "Use Phase 31 normalized persistence for future rejected risk decisions.",
+                "Do not delete or mutate journal rows automatically.",
+            ],
+            "source": "crypto_hunter_risk_hygiene_remediation_preview_v1",
+        }
+
+    def validate_recent_records_only(self, limit: int | None = None) -> dict:
+        """Validate only recent records according to configured limit."""
+        limit = limit or self.settings.risk_hygiene_recent_record_limit
+        records = self.journal.get_recent_risk_decisions(limit=limit)
+        return self.validate_recent_records_only_from_records(records, limit)
+
+    def validate_recent_records_only_from_records(self, records: list[dict], limit: int | None = None) -> dict:
+        """Validate provided recent records."""
+        limit = limit or len(records)
+        inconsistencies = self.scan_records(records=records)
+        current = [issue for issue in inconsistencies if not self.is_legacy_inconsistency(self._record_by_id(records, issue.record_id))]
+        legacy = [issue for issue in inconsistencies if self.is_legacy_inconsistency(self._record_by_id(records, issue.record_id))]
+        blocking = current + ([] if self.settings.risk_hygiene_ignore_legacy_in_readiness else legacy)
+        return {
+            "passed": not blocking,
+            "recent_limit": limit,
+            "current_inconsistency_count": len(current),
+            "legacy_inconsistency_count": len(legacy),
+            "blocking_inconsistency_count": len(blocking),
+            "preview_only": True,
+            "source": "crypto_hunter_risk_recent_cleanliness_v1",
+        }
+
+    def normalize_rejected_decision_payload(self, payload: dict) -> dict:
+        """Normalize rejected risk decision payload for future persistence."""
+        return normalize_rejected_risk_payload(payload)
+
+    def is_legacy_inconsistency(self, record: dict | None) -> bool:
+        """Return whether inconsistent row appears to predate Phase 31 normalization."""
+        if not record:
+            return False
+        if bool(record.get("approved", False)):
+            return False
+        source = str(record.get("source", ""))
+        return source == "crypto_hunter_risk_v1" and any(self._positive(record.get(field)) for field in ("approved_quantity", "max_quantity", "risk_amount"))
 
     def _scan_one(self, record: dict) -> list[RiskRecordInconsistency]:
         """Scan one risk record."""
@@ -95,3 +188,19 @@ class RiskRecordHygiene:
         """Return list field safely."""
         return value if isinstance(value, list) else []
 
+    def _recommendation(self, classification: str) -> str:
+        """Return read-only recommendation for classification."""
+        if classification == "LEGACY_INCONSISTENT_REJECTED_RECORD":
+            return "Keep for audit; future Phase 31 records are normalized before persistence."
+        if classification == "CURRENT_INCONSISTENT_REJECTED_RECORD":
+            return "Investigate current risk persistence path before paper-trade observation."
+        if classification == "MALFORMED_RECORD":
+            return "Review malformed risk journal payload."
+        return "No remediation needed."
+
+    def _record_by_id(self, records: list[dict], record_id: int | None) -> dict | None:
+        """Find a record by id."""
+        for record in records:
+            if record.get("id") == record_id:
+                return record
+        return None

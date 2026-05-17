@@ -41,6 +41,17 @@ def loads_json(value: str | None) -> Any:
     return json.loads(value)
 
 
+def normalize_rejected_risk_payload(payload: dict) -> dict:
+    """Clear approval-only fields from rejected risk decisions before persistence."""
+    data = scrub_secrets(dict(payload))
+    if data.get("approved") is False:
+        data["approved_quantity"] = None
+        data["max_quantity"] = None
+        data["risk_amount"] = None
+        data["estimated_notional"] = None
+    return data
+
+
 def scrub_secrets(value: Any) -> Any:
     """Remove secret-looking keys from nested structures."""
     if isinstance(value, dict):

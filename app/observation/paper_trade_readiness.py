@@ -40,6 +40,7 @@ class PaperTradeReadinessService:
         safety = self.safety_audit.run().to_dict()
         decision = self.decision_gate.evaluate(completed, safety_report=safety).to_dict()
         hygiene = self.risk_hygiene.summary(records=risk_records)
+        recent_cleanliness = self._recent_cleanliness(hygiene, risk_records)
         early = EarlyRecoveryWatchlistService(settings=self.settings, runs=completed).get_report()
         strong_buy_count = sum(1 for result in results if (result.get("signal") or {}).get("category") == "STRONG_BUY")
         risk_approved_count = sum(1 for result in results if (result.get("risk_decision") or {}).get("approved"))
@@ -51,7 +52,7 @@ class PaperTradeReadinessService:
             self._check("observations", len(results) >= self.settings.paper_trade_observation_min_observations, "Enough observations required", {"observations": len(results)}),
             self._check("strong_buy_signals", strong_buy_count > 0 or not self.settings.paper_trade_observation_require_strong_buy, "STRONG_BUY observations required for paper-trade review", {"strong_buy_count": strong_buy_count}),
             self._check("risk_approvals", risk_approved_count > 0 or not self.settings.paper_trade_observation_require_risk_approval, "Risk-approved observations required for paper-trade review", {"risk_approved_count": risk_approved_count}),
-            self._check("risk_record_hygiene", hygiene["inconsistency_count"] <= self.settings.paper_trade_observation_max_recent_risk_inconsistencies, "Risk records must be internally consistent", hygiene),
+            self._check("risk_record_hygiene", recent_cleanliness.get("blocking_inconsistency_count", hygiene["inconsistency_count"]) <= self.settings.paper_trade_observation_max_recent_risk_inconsistencies, "Risk records must be internally consistent", {"hygiene": hygiene, "recent_cleanliness": recent_cleanliness}),
             self._check("early_recovery_observe_only", self._early_recovery_observe_only(early), "Early recovery must remain observe-only", {"early_recovery_count": len(early.get("candidates", []))}),
             self._check("paper_trades_disabled", not self.settings.paper_trade_observation_allow_enable, "Paper trade observation must remain disabled in this phase", {}),
             self._check("operator_approval_required", self.settings.paper_trade_observation_require_operator_approval, "Future paper-trade observation requires operator approval", {}),
@@ -96,6 +97,18 @@ class PaperTradeReadinessService:
     def _early_recovery_observe_only(self, report: dict) -> bool:
         """Return whether all early recovery candidates are observe-only."""
         return all(not item.get("trade_allowed") and not item.get("paper_trade_allowed") and not item.get("live_trade_allowed") and item.get("action") == "OBSERVE_ONLY" for item in report.get("candidates", []))
+
+    def _recent_cleanliness(self, hygiene: dict, risk_records: list[dict] | None) -> dict:
+        """Return recent risk cleanliness while tolerating older test doubles."""
+        if risk_records is None and hasattr(self.risk_hygiene, "validate_recent_records_only"):
+            return self.risk_hygiene.validate_recent_records_only()
+        if risk_records is not None and hasattr(self.risk_hygiene, "validate_recent_records_only_from_records"):
+            return self.risk_hygiene.validate_recent_records_only_from_records(risk_records)
+        return {
+            "passed": bool(hygiene.get("passed")),
+            "blocking_inconsistency_count": hygiene.get("inconsistency_count", 0),
+            "source": "crypto_hunter_risk_recent_cleanliness_v1",
+        }
 
     def _hard_blocked(self, checks: list[PaperTradeReadinessCheck]) -> bool:
         """Return whether safety/hygiene hard blockers exist."""
