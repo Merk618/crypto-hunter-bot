@@ -11,6 +11,8 @@ from app.storage.models import (
     AccountSnapshotRecord,
     BotEventRecord,
     ErrorRecord,
+    ObservationResultRecord,
+    ObservationRunRecord,
     PaperFillRecord,
     PaperOrderRecord,
     PaperPositionRecord,
@@ -166,6 +168,52 @@ class TradeJournal:
         record = ErrorRecord(component=component, error_type=error_type, message=message, payload_json=dumps_json(payload) if payload is not None else None)
         return self._add(record)
 
+    def record_observation_run(self, run: dict) -> dict:
+        """Record observation run metadata."""
+        data = to_plain_data(run)
+        record = ObservationRunRecord(
+            run_id=data.get("run_id", ""),
+            started_at=self._as_datetime(data.get("started_at")),
+            completed_at=self._as_datetime(data.get("completed_at")),
+            status=data.get("status", ""),
+            symbols_requested=int(data.get("symbols_requested", 0) or 0),
+            symbols_processed=int(data.get("symbols_processed", 0) or 0),
+            signals_generated=int(data.get("signals_generated", 0) or 0),
+            risk_decisions_generated=int(data.get("risk_decisions_generated", 0) or 0),
+            paper_trades_created=int(data.get("paper_trades_created", 0) or 0),
+            warnings_json=dumps_json(data.get("warnings", [])),
+            blockers_json=dumps_json(data.get("blockers", [])),
+            source=data.get("source", "crypto_hunter_observation_run_v1"),
+        )
+        return self._add(record)
+
+    def record_observation_result(self, run_id: str, result: dict) -> dict:
+        """Record one observation result."""
+        data = to_plain_data(result)
+        record = ObservationResultRecord(
+            run_id=run_id,
+            symbol=data.get("symbol", ""),
+            timeframe=data.get("timeframe", ""),
+            signal_json=dumps_json(data.get("signal")),
+            risk_decision_json=dumps_json(data.get("risk_decision")),
+            paper_trade_result_json=dumps_json(data.get("paper_trade_result")),
+            action_taken=data.get("action_taken", "observed"),
+            reasons_json=dumps_json(data.get("reasons", [])),
+            warnings_json=dumps_json(data.get("warnings", [])),
+            blockers_json=dumps_json(data.get("blockers", [])),
+            observed_at=self._as_datetime(data.get("observed_at")),
+            source=data.get("source", "crypto_hunter_observation_result_v1"),
+        )
+        return self._add(record)
+
+    def record_observation_run_with_results(self, run: dict) -> dict:
+        """Record an observation run and its nested results."""
+        data = to_plain_data(run)
+        run_record = self.record_observation_run(data)
+        for result in data.get("results", []) or []:
+            self.record_observation_result(data.get("run_id", ""), result)
+        return run_record
+
     def get_recent_bot_events(self, limit: int = 50) -> list[dict]:
         """Return recent bot events."""
         return self._recent(BotEventRecord, limit)
@@ -201,6 +249,28 @@ class TradeJournal:
     def get_recent_errors(self, limit: int = 50) -> list[dict]:
         """Return recent errors."""
         return self._recent(ErrorRecord, limit)
+
+    def get_recent_observation_runs(self, limit: int = 50, completed_only: bool = False) -> list[dict]:
+        """Return recent observation runs."""
+        with get_db_session(self.database_url) as session:
+            stmt = select(ObservationRunRecord).order_by(desc(ObservationRunRecord.id)).limit(limit)
+            if completed_only:
+                stmt = select(ObservationRunRecord).where(ObservationRunRecord.status == "completed").order_by(desc(ObservationRunRecord.id)).limit(limit)
+            return [self._model_to_dict(row) for row in session.scalars(stmt).all()]
+
+    def get_recent_observation_results(self, limit: int = 500, run_id: str | None = None, symbol: str | None = None) -> list[dict]:
+        """Return recent observation results."""
+        with get_db_session(self.database_url) as session:
+            stmt = select(ObservationResultRecord).order_by(desc(ObservationResultRecord.id)).limit(limit)
+            if run_id:
+                stmt = select(ObservationResultRecord).where(ObservationResultRecord.run_id == run_id).order_by(desc(ObservationResultRecord.id)).limit(limit)
+            if symbol:
+                normalized = symbol.upper().replace("-", "/")
+                if run_id:
+                    stmt = select(ObservationResultRecord).where(ObservationResultRecord.run_id == run_id, ObservationResultRecord.symbol == normalized).order_by(desc(ObservationResultRecord.id)).limit(limit)
+                else:
+                    stmt = select(ObservationResultRecord).where(ObservationResultRecord.symbol == normalized).order_by(desc(ObservationResultRecord.id)).limit(limit)
+            return [self._model_to_dict(row) for row in session.scalars(stmt).all()]
 
     def _add(self, record) -> dict:
         """Add a model and return dict output."""

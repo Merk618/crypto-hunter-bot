@@ -35,6 +35,7 @@ from app.diagnostics.smoke_test_runner import SmokeTestRunner
 from app.exchanges.kraken_adapter import EmptyMarketDataError, InvalidSymbolError, KrakenRequestError, UnsupportedTimeframeError
 from app.journal.journal_hygiene import JournalHygiene
 from app.observation.early_recovery import EarlyRecoveryClassifier
+from app.observation.observation_hydration import ObservationHydrationService
 from app.observation.observation_readiness import ObservationReadinessChecker
 from app.observation.observation_session import ObservationSessionManager
 from app.observation.paper_observation_engine import PaperObservationEngine
@@ -828,6 +829,13 @@ def observation_recent(limit: int = Query(default=50, ge=1, le=500)) -> dict:
 @router.get("/observation/report")
 def observation_report(limit: int = Query(default=100, ge=1, le=500)) -> dict:
     """Return observation report."""
+    runs = _observation_runs_for_reports(limit=limit)
+    if runs:
+        from app.observation.observation_report import build_observation_report
+
+        report = build_observation_report(runs, limit=limit).to_dict()
+        report["history_source"] = "memory_or_persisted"
+        return report
     return _paper_observation_engine.get_observation_report(limit=limit)
 
 
@@ -842,6 +850,7 @@ def calibration_status() -> dict:
         "min_observation_runs": settings.calibration_min_observation_runs,
         "min_sample_size_for_changes": settings.calibration_min_sample_size_for_changes,
         "recent_observation_runs": len(_paper_observation_engine.recent_runs),
+        "persisted_history": ObservationHydrationService(settings=settings).history_summary(limit=settings.observation_history_limit),
         "source": "crypto_hunter_calibration_status_v1",
     }
 
@@ -849,19 +858,19 @@ def calibration_status() -> dict:
 @router.get("/calibration/report")
 def calibration_report() -> dict:
     """Return read-only strategy calibration report."""
-    return StrategyCalibrationReportBuilder(settings=get_settings()).build(_paper_observation_engine.recent_runs)
+    return StrategyCalibrationReportBuilder(settings=get_settings()).build(_observation_runs_for_reports())
 
 
 @router.get("/calibration/symbol/{symbol}")
 def calibration_symbol(symbol: str) -> dict:
     """Return read-only strategy calibration summary for one symbol."""
-    return StrategyCalibrationReportBuilder(settings=get_settings()).build_for_symbol(symbol, _paper_observation_engine.recent_runs)
+    return StrategyCalibrationReportBuilder(settings=get_settings()).build_for_symbol(symbol, _observation_runs_for_reports())
 
 
 @router.get("/calibration/recommendations")
 def calibration_recommendations() -> dict:
     """Return read-only strategy threshold recommendations."""
-    report = StrategyCalibrationReportBuilder(settings=get_settings()).build(_paper_observation_engine.recent_runs)
+    report = StrategyCalibrationReportBuilder(settings=get_settings()).build(_observation_runs_for_reports())
     return {
         "threshold_recommendations": report["threshold_recommendations"],
         "findings": report["findings"],
@@ -908,7 +917,28 @@ def observation_window_reset() -> dict:
 
 def _decision_runs() -> list[dict]:
     """Return the best available observation runs for decision endpoints."""
-    return _observation_session_manager.session_runs or _paper_observation_engine.recent_runs
+    if _observation_session_manager.session_runs:
+        return _observation_session_manager.session_runs
+    if _paper_observation_engine.recent_runs:
+        return _paper_observation_engine.recent_runs
+    settings = get_settings()
+    if settings.observation_decision_gate_use_persisted_history:
+        return ObservationHydrationService(settings=settings).load_recent_runs(limit=settings.observation_history_limit)
+    return []
+
+
+def _observation_runs_for_reports(limit: int | None = None, include_refused: bool = False) -> list[dict]:
+    """Return observation runs from memory, falling back to persisted history."""
+    if _observation_session_manager.session_runs:
+        runs = _observation_session_manager.session_runs
+    elif _paper_observation_engine.recent_runs:
+        runs = _paper_observation_engine.recent_runs
+    else:
+        runs = ObservationHydrationService(settings=get_settings()).load_recent_runs(limit=limit, include_refused=include_refused)
+    if include_refused:
+        return runs[:limit] if limit else runs
+    completed = [run for run in runs if run.get("status", "completed") == "completed"]
+    return completed[:limit] if limit else completed
 
 
 @router.get("/observation/decision-gate")
@@ -927,6 +957,34 @@ def observation_early_recovery() -> dict:
         "action": "OBSERVE_ONLY",
         "source": "crypto_hunter_early_recovery_candidates_v1",
     }
+
+
+@router.get("/observation/history")
+def observation_history(limit: int = Query(default=500, ge=1, le=5000), include_refused: bool = False) -> dict:
+    """Return persisted observation history status and hydrated runs."""
+    service = ObservationHydrationService(settings=get_settings())
+    runs = service.load_recent_runs(limit=limit, include_refused=include_refused)
+    return {"runs": runs, "count": len(runs), "history_source": "persisted", "source": "crypto_hunter_observation_history_v1"}
+
+
+@router.get("/observation/history/runs")
+def observation_history_runs(limit: int = Query(default=500, ge=1, le=5000), include_refused: bool = False) -> dict:
+    """Return persisted observation runs."""
+    runs = ObservationHydrationService(settings=get_settings()).load_recent_runs(limit=limit, include_refused=include_refused)
+    return {"runs": runs, "count": len(runs), "history_source": "persisted", "source": "crypto_hunter_observation_history_runs_v1"}
+
+
+@router.get("/observation/history/results")
+def observation_history_results(limit: int = Query(default=500, ge=1, le=5000), include_refused: bool = False) -> dict:
+    """Return persisted observation results."""
+    results = ObservationHydrationService(settings=get_settings()).load_recent_results(limit=limit, include_refused=include_refused)
+    return {"results": results, "count": len(results), "history_source": "persisted", "source": "crypto_hunter_observation_history_results_v1"}
+
+
+@router.get("/observation/history/summary")
+def observation_history_summary(limit: int = Query(default=500, ge=1, le=5000)) -> dict:
+    """Return persisted observation history summary."""
+    return ObservationHydrationService(settings=get_settings()).history_summary(limit=limit)
 
 
 @router.get("/calibration/decision-gate")

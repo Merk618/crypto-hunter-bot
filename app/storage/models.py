@@ -176,3 +176,45 @@ class ErrorRecord(Base):
     message: Mapped[str] = mapped_column(Text)
     payload_json: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, index=True)
+
+
+class ObservationRunRecord(Base):
+    """Observation run metadata table."""
+
+    __tablename__ = "observation_runs"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    run_id: Mapped[str] = mapped_column(String(80), unique=True, index=True)
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    status: Mapped[str] = mapped_column(String(40), index=True)
+    symbols_requested: Mapped[int] = mapped_column(Integer, default=0)
+    symbols_processed: Mapped[int] = mapped_column(Integer, default=0)
+    signals_generated: Mapped[int] = mapped_column(Integer, default=0)
+    risk_decisions_generated: Mapped[int] = mapped_column(Integer, default=0)
+    paper_trades_created: Mapped[int] = mapped_column(Integer, default=0)
+    warnings_json: Mapped[str | None] = mapped_column(Text, nullable=True)
+    blockers_json: Mapped[str | None] = mapped_column(Text, nullable=True)
+    source: Mapped[str] = mapped_column(String(100), default="crypto_hunter_observation_run_v1")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, index=True)
+
+
+class ObservationResultRecord(Base):
+    """Observation result detail table."""
+
+    __tablename__ = "observation_results"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    run_id: Mapped[str] = mapped_column(String(80), index=True)
+    symbol: Mapped[str] = mapped_column(String(40), index=True)
+    timeframe: Mapped[str] = mapped_column(String(20))
+    signal_json: Mapped[str | None] = mapped_column(Text, nullable=True)
+    risk_decision_json: Mapped[str | None] = mapped_column(Text, nullable=True)
+    paper_trade_result_json: Mapped[str | None] = mapped_column(Text, nullable=True)
+    action_taken: Mapped[str] = mapped_column(String(60), default="observed")
+    reasons_json: Mapped[str | None] = mapped_column(Text, nullable=True)
+    warnings_json: Mapped[str | None] = mapped_column(Text, nullable=True)
+    blockers_json: Mapped[str | None] = mapped_column(Text, nullable=True)
+    observed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    source: Mapped[str] = mapped_column(String(100), default="crypto_hunter_observation_result_v1")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, index=True)

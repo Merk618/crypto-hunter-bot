@@ -11,6 +11,7 @@ from app.config import Settings, get_settings
 from app.data.market_data_service import MarketDataService
 from app.execution.trade_executor import TradeExecutor
 from app.observation.observation_models import ObservationResult, ObservationRun
+from app.observation.observation_persistence import ObservationPersistenceService
 from app.observation.observation_readiness import ObservationReadinessChecker
 from app.observation.observation_report import build_observation_report
 from app.observation.observation_scheduler import ObservationScheduler
@@ -42,6 +43,7 @@ class PaperObservationEngine:
         self.readiness_checker = readiness_checker or ObservationReadinessChecker()
         self.scheduler = scheduler or ObservationScheduler(self.settings.paper_observation_min_seconds_between_runs)
         self.journal = journal if journal is not None else (TradeJournal() if self.settings.enable_trade_journal else None)
+        self.persistence = ObservationPersistenceService(self.journal, self.settings) if self.journal else None
         self.recent_runs: list[dict] = []
 
     def run_once(self, manual_run: bool = False, allow_paper_trades: bool = False) -> dict:
@@ -78,6 +80,7 @@ class PaperObservationEngine:
         ).to_dict()
         self.recent_runs.insert(0, run)
         self.recent_runs = self.recent_runs[:500]
+        self._persist_run(run)
         return run
 
     def observe_symbol(self, symbol: str, allow_paper_trades: bool = False) -> ObservationResult:
@@ -134,7 +137,7 @@ class PaperObservationEngine:
 
     def _refused_run(self, message: str, blockers: list[str] | None = None, warnings: list[str] | None = None) -> dict:
         """Return refused run."""
-        return ObservationRun(
+        run = ObservationRun(
             run_id=str(uuid.uuid4()),
             started_at=datetime.now(timezone.utc).isoformat(),
             completed_at=datetime.now(timezone.utc).isoformat(),
@@ -147,6 +150,8 @@ class PaperObservationEngine:
             warnings=warnings or [],
             blockers=[message] + list(blockers or []),
         ).to_dict()
+        self._persist_run(run)
+        return run
 
     def _journal(self, result: ObservationResult) -> None:
         """Record signal/risk observation artifacts without raising."""
@@ -159,3 +164,9 @@ class PaperObservationEngine:
                 self.journal.record_risk_decision(result.risk_decision)
         except Exception:
             return
+
+    def _persist_run(self, run: dict) -> None:
+        """Persist observation run without affecting bot behavior."""
+        if not self.persistence:
+            return
+        self.persistence.persist_run(run)

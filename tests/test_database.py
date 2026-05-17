@@ -21,4 +21,6 @@ def test_init_db_creates_tables(tmp_path) -> None:
         "account_snapshots",
         "scan_results",
         "error_records",
+        "observation_runs",
+        "observation_results",
     }.issubset(tables)
