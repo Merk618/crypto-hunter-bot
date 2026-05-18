@@ -14,6 +14,8 @@ from app.operator.startup_checks import StartupChecks
 from app.observation.fresh_observation_validator import FreshObservationValidator
 from app.observation.paper_trade_approval_gate import PaperTradeApprovalGate
 from app.observation.controlled_paper_observation import ControlledPaperObservationService
+from app.observation.controlled_paper_audit import ControlledPaperAuditService
+from app.observation.controlled_paper_review import ControlledPaperReviewService
 from app.reporting.unified_report_service import UnifiedReportService
 
 
@@ -34,6 +36,8 @@ class OperatorService:
         fresh_validator: FreshObservationValidator | None = None,
         approval_gate: PaperTradeApprovalGate | None = None,
         controlled_paper: ControlledPaperObservationService | None = None,
+        controlled_review: ControlledPaperReviewService | None = None,
+        controlled_audit: ControlledPaperAuditService | None = None,
     ) -> None:
         """Initialize operator dependencies."""
         self.settings = settings or get_settings()
@@ -48,6 +52,8 @@ class OperatorService:
         self.fresh_validator = fresh_validator or FreshObservationValidator(settings=self.settings)
         self.approval_gate = approval_gate or PaperTradeApprovalGate(settings=self.settings)
         self.controlled_paper = controlled_paper or ControlledPaperObservationService(settings=self.settings)
+        self.controlled_review = controlled_review or ControlledPaperReviewService(settings=self.settings)
+        self.controlled_audit = controlled_audit or ControlledPaperAuditService(settings=self.settings)
 
     def get_operator_status(self) -> dict:
         """Return standalone operator status."""
@@ -101,6 +107,8 @@ class OperatorService:
         controlled = self._safe(lambda: self.controlled_paper.evaluate(), {})
         if controlled.get("status") == "DISABLED_BY_CONFIG":
             actions.append("Controlled paper observation is disabled by config.")
+        audit = self._safe(lambda: self.controlled_audit.audit(), {"recommended_next_actions": []})
+        actions.extend(audit.get("recommended_next_actions") or [])
         return list(dict.fromkeys(actions))
 
     def _fresh_warnings(self) -> list[str]:
@@ -119,6 +127,9 @@ class OperatorService:
         controlled = self._safe(lambda: self.controlled_paper.status(), {})
         if not controlled.get("enabled", False):
             warnings.append("Controlled paper observation is disabled by config.")
+        audit = self._safe(lambda: self.controlled_audit.audit(), {})
+        if not audit.get("passed", True):
+            warnings.append("Controlled paper guardrail audit has blockers.")
         return warnings
 
     def _safe(self, fn, default):

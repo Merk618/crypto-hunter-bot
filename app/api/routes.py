@@ -36,7 +36,9 @@ from app.exchanges.kraken_adapter import EmptyMarketDataError, InvalidSymbolErro
 from app.journal.journal_hygiene import JournalHygiene
 from app.observation.clean_observation_verifier import CleanObservationVerifier
 from app.observation.controlled_paper_models import ControlledPaperObservationRequest
+from app.observation.controlled_paper_audit import ControlledPaperAuditService
 from app.observation.controlled_paper_observation import ControlledPaperObservationService
+from app.observation.controlled_paper_review import ControlledPaperReviewService
 from app.observation.early_recovery import EarlyRecoveryClassifier
 from app.observation.early_recovery_watchlist import EarlyRecoveryWatchlistService
 from app.observation.fresh_observation_validator import FreshObservationValidator
@@ -1171,11 +1173,40 @@ def controlled_paper_recent() -> dict:
     return ControlledPaperObservationService(settings=get_settings()).recent()
 
 
+@router.get("/observation/controlled-paper/review")
+def controlled_paper_review() -> dict:
+    """Return controlled paper review report."""
+    return ControlledPaperReviewService(settings=get_settings()).review()
+
+
+@router.get("/observation/controlled-paper/audit")
+def controlled_paper_audit() -> dict:
+    """Return controlled paper guardrail audit."""
+    return ControlledPaperAuditService(settings=get_settings()).audit()
+
+
+@router.get("/observation/controlled-paper/guardrails")
+def controlled_paper_guardrails() -> dict:
+    """Return compact controlled paper guardrails."""
+    return ControlledPaperAuditService(settings=get_settings()).guardrails()
+
+
 @router.get("/operator/controlled-paper-observation")
 def operator_controlled_paper_observation() -> dict:
     """Return operator controlled paper observation status."""
     service = ControlledPaperObservationService(settings=get_settings())
     return {"status": service.status(), "evaluation": service.evaluate(), "source": "crypto_hunter_operator_controlled_paper_observation_v1"}
+
+
+@router.get("/operator/controlled-paper-review")
+def operator_controlled_paper_review() -> dict:
+    """Return operator controlled paper review and audit."""
+    settings = get_settings()
+    return {
+        "review": ControlledPaperReviewService(settings=settings).review(),
+        "audit": ControlledPaperAuditService(settings=settings).audit(),
+        "source": "crypto_hunter_operator_controlled_paper_review_v1",
+    }
 
 
 @router.get("/calibration/decision-gate")

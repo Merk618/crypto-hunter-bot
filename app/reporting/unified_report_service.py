@@ -8,7 +8,9 @@ from app.config import Settings, get_settings
 from app.core.safety_audit import SafetyAudit
 from app.journal.journal_filters import dedupe_candidates, filter_production_records
 from app.observation.clean_observation_verifier import CleanObservationVerifier
+from app.observation.controlled_paper_audit import ControlledPaperAuditService
 from app.observation.controlled_paper_observation import ControlledPaperObservationService
+from app.observation.controlled_paper_review import ControlledPaperReviewService
 from app.observation.early_recovery_watchlist import EarlyRecoveryWatchlistService
 from app.observation.fresh_observation_validator import FreshObservationValidator
 from app.observation.paper_trade_approval_gate import PaperTradeApprovalGate
@@ -85,6 +87,8 @@ class UnifiedReportService:
             "fresh_observation_validation": self._safe(lambda: FreshObservationValidator(settings=self.settings).validate(), {"passed": False, "status": "UNAVAILABLE"}),
             "paper_trade_approval_gate": self._safe(lambda: PaperTradeApprovalGate(settings=self.settings).evaluate(), {"approval_status": "NOT_READY", "eligible_for_operator_review": False, "paper_trade_observation_enabled": False}),
             "controlled_paper_observation": self._safe(lambda: ControlledPaperObservationService(settings=self.settings).status(), {"enabled": False, "paper_trade_observation_enabled": False}),
+            "controlled_paper_review": self._safe(lambda: ControlledPaperReviewService(settings=self.settings).review(), {"paper_trades_created": 0, "recent_runs_count": 0}),
+            "controlled_paper_audit": self._safe(lambda: ControlledPaperAuditService(settings=self.settings).audit(), {"passed": True, "blockers": []}),
             "paper_trade_readiness": self._safe(lambda: PaperTradeReadinessService(settings=self.settings).check(), {"ready": False, "decision": "NOT_READY"}),
             "safety": {
                 "passed": bool(safety.get("passed", False)),
@@ -157,6 +161,8 @@ class UnifiedReportService:
         controlled = health.get("controlled_paper_observation", {})
         if not controlled.get("enabled", False):
             warnings.append("Controlled paper observation is disabled by config.")
+        if not health.get("controlled_paper_audit", {}).get("passed", True):
+            warnings.append("Controlled paper guardrail audit has blockers.")
         return warnings
 
     def _safe(self, fn, default):
