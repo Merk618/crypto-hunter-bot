@@ -13,6 +13,7 @@ from app.operator.operator_models import OperatorStatus
 from app.operator.startup_checks import StartupChecks
 from app.observation.fresh_observation_validator import FreshObservationValidator
 from app.observation.paper_trade_approval_gate import PaperTradeApprovalGate
+from app.observation.controlled_paper_observation import ControlledPaperObservationService
 from app.reporting.unified_report_service import UnifiedReportService
 
 
@@ -32,6 +33,7 @@ class OperatorService:
         command_builder: CommandSummaryBuilder | None = None,
         fresh_validator: FreshObservationValidator | None = None,
         approval_gate: PaperTradeApprovalGate | None = None,
+        controlled_paper: ControlledPaperObservationService | None = None,
     ) -> None:
         """Initialize operator dependencies."""
         self.settings = settings or get_settings()
@@ -45,6 +47,7 @@ class OperatorService:
         self.command_builder = command_builder or CommandSummaryBuilder()
         self.fresh_validator = fresh_validator or FreshObservationValidator(settings=self.settings)
         self.approval_gate = approval_gate or PaperTradeApprovalGate(settings=self.settings)
+        self.controlled_paper = controlled_paper or ControlledPaperObservationService(settings=self.settings)
 
     def get_operator_status(self) -> dict:
         """Return standalone operator status."""
@@ -95,6 +98,9 @@ class OperatorService:
         actions.extend(fresh.get("recommended_next_actions") or [])
         approval = self._safe(lambda: self.approval_gate.evaluate(), {"recommended_next_actions": []})
         actions.extend(approval.get("recommended_next_actions") or [])
+        controlled = self._safe(lambda: self.controlled_paper.evaluate(), {})
+        if controlled.get("status") == "DISABLED_BY_CONFIG":
+            actions.append("Controlled paper observation is disabled by config.")
         return list(dict.fromkeys(actions))
 
     def _fresh_warnings(self) -> list[str]:
@@ -110,6 +116,9 @@ class OperatorService:
             warnings.append("Paper-trade approval gate is not ready.")
         if approval.get("eligible_for_operator_review"):
             warnings.append("Paper-trade observation is eligible for operator review only; execution remains disabled.")
+        controlled = self._safe(lambda: self.controlled_paper.status(), {})
+        if not controlled.get("enabled", False):
+            warnings.append("Controlled paper observation is disabled by config.")
         return warnings
 
     def _safe(self, fn, default):

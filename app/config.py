@@ -239,6 +239,23 @@ class Settings(BaseSettings):
     paper_trade_approval_min_risk_approved_count: int = Field(default=1, ge=0, alias="PAPER_TRADE_APPROVAL_MIN_RISK_APPROVED_COUNT")
     paper_trade_approval_allow_legacy_warnings: bool = Field(default=True, alias="PAPER_TRADE_APPROVAL_ALLOW_LEGACY_WARNINGS")
     paper_trade_observation_enabled: bool = Field(default=False, alias="PAPER_TRADE_OBSERVATION_ENABLED")
+    controlled_paper_observation_enabled: bool = Field(default=False, alias="CONTROLLED_PAPER_OBSERVATION_ENABLED")
+    controlled_paper_observation_require_approval: bool = Field(default=True, alias="CONTROLLED_PAPER_OBSERVATION_REQUIRE_APPROVAL")
+    controlled_paper_observation_require_operator_start: bool = Field(default=True, alias="CONTROLLED_PAPER_OBSERVATION_REQUIRE_OPERATOR_START")
+    controlled_paper_observation_allow_buys: bool = Field(default=False, alias="CONTROLLED_PAPER_OBSERVATION_ALLOW_BUYS")
+    controlled_paper_observation_allow_sells: bool = Field(default=False, alias="CONTROLLED_PAPER_OBSERVATION_ALLOW_SELLS")
+    controlled_paper_observation_max_notional_per_trade: float = Field(default=25.0, gt=0, alias="CONTROLLED_PAPER_OBSERVATION_MAX_NOTIONAL_PER_TRADE")
+    controlled_paper_observation_max_trades_per_run: int = Field(default=1, ge=0, alias="CONTROLLED_PAPER_OBSERVATION_MAX_TRADES_PER_RUN")
+    controlled_paper_observation_max_trades_per_day: int = Field(default=3, ge=0, alias="CONTROLLED_PAPER_OBSERVATION_MAX_TRADES_PER_DAY")
+    controlled_paper_observation_allowed_symbols: list[str] = Field(default_factory=lambda: ["BTC/USD", "ETH/USD", "SOL/USD", "SUI/USD"], alias="CONTROLLED_PAPER_OBSERVATION_ALLOWED_SYMBOLS")
+    controlled_paper_observation_min_signal_score: int = Field(default=80, ge=0, le=100, alias="CONTROLLED_PAPER_OBSERVATION_MIN_SIGNAL_SCORE")
+    controlled_paper_observation_require_strong_buy: bool = Field(default=True, alias="CONTROLLED_PAPER_OBSERVATION_REQUIRE_STRONG_BUY")
+    controlled_paper_observation_require_risk_approved: bool = Field(default=True, alias="CONTROLLED_PAPER_OBSERVATION_REQUIRE_RISK_APPROVED")
+    controlled_paper_observation_require_approval_gate: bool = Field(default=True, alias="CONTROLLED_PAPER_OBSERVATION_REQUIRE_APPROVAL_GATE")
+    controlled_paper_observation_require_fresh_validation: bool = Field(default=True, alias="CONTROLLED_PAPER_OBSERVATION_REQUIRE_FRESH_VALIDATION")
+    controlled_paper_observation_require_live_locked: bool = Field(default=True, alias="CONTROLLED_PAPER_OBSERVATION_REQUIRE_LIVE_LOCKED")
+    controlled_paper_observation_require_addorder_absent: bool = Field(default=True, alias="CONTROLLED_PAPER_OBSERVATION_REQUIRE_ADDORDER_ABSENT")
+    controlled_paper_observation_dry_run_preview_first: bool = Field(default=True, alias="CONTROLLED_PAPER_OBSERVATION_DRY_RUN_PREVIEW_FIRST")
     risk_hygiene_enabled: bool = Field(default=True, alias="RISK_HYGIENE_ENABLED")
     risk_hygiene_preview_only: bool = Field(default=True, alias="RISK_HYGIENE_PREVIEW_ONLY")
     risk_hygiene_classify_legacy_records: bool = Field(default=True, alias="RISK_HYGIENE_CLASSIFY_LEGACY_RECORDS")
@@ -254,7 +271,7 @@ class Settings(BaseSettings):
     coinbase_api_secret: str = Field(default="", alias="COINBASE_API_SECRET")
     discord_webhook_url: str = Field(default="", alias="DISCORD_WEBHOOK_URL")
 
-    @field_validator("allowed_symbols", "phase14_smoke_symbols", "validation_symbols_crypto", "paper_observation_symbols", "observation_window_symbols", mode="before")
+    @field_validator("allowed_symbols", "phase14_smoke_symbols", "validation_symbols_crypto", "paper_observation_symbols", "observation_window_symbols", "controlled_paper_observation_allowed_symbols", mode="before")
     @classmethod
     def parse_allowed_symbols(cls, value: str | list[str]) -> list[str]:
         """Parse comma-delimited symbols from environment variables."""
@@ -328,8 +345,8 @@ class Settings(BaseSettings):
             raise ValueError("ALLOW_LIVE_REVIEW must remain false in this phase")
         if self.paper_trade_observation_allow_enable:
             raise ValueError("PAPER_TRADE_OBSERVATION_ALLOW_ENABLE must remain false in this phase")
-        if self.paper_trade_observation_enabled:
-            raise ValueError("PAPER_TRADE_OBSERVATION_ENABLED must remain false in this phase")
+        if self.controlled_paper_observation_allow_sells:
+            raise ValueError("CONTROLLED_PAPER_OBSERVATION_ALLOW_SELLS must remain false in this phase")
         if not self.risk_hygiene_preview_only or self.risk_hygiene_allow_destructive_cleanup:
             raise ValueError("Risk hygiene must remain preview-only with destructive cleanup disabled")
         return self

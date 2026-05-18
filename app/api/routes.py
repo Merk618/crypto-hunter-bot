@@ -35,6 +35,8 @@ from app.diagnostics.smoke_test_runner import SmokeTestRunner
 from app.exchanges.kraken_adapter import EmptyMarketDataError, InvalidSymbolError, KrakenRequestError, UnsupportedTimeframeError
 from app.journal.journal_hygiene import JournalHygiene
 from app.observation.clean_observation_verifier import CleanObservationVerifier
+from app.observation.controlled_paper_models import ControlledPaperObservationRequest
+from app.observation.controlled_paper_observation import ControlledPaperObservationService
 from app.observation.early_recovery import EarlyRecoveryClassifier
 from app.observation.early_recovery_watchlist import EarlyRecoveryWatchlistService
 from app.observation.fresh_observation_validator import FreshObservationValidator
@@ -71,6 +73,23 @@ class PaperOrderRequest(BaseModel):
     quantity: float = Field(gt=0)
     market_price: float = Field(gt=0)
     reason: str | None = None
+
+
+class ControlledPaperRequestBody(BaseModel):
+    """Request body for controlled paper observation."""
+
+    manual_start: bool = False
+    operator_acknowledged: bool = False
+    allow_paper_trade_preview: bool = True
+    allow_paper_trade_execution: bool = False
+    symbols: list[str] = Field(default_factory=list)
+    timeframe: str = "1h"
+    max_trades: int | None = None
+    reason: str = "controlled paper observation"
+
+    def to_request(self) -> ControlledPaperObservationRequest:
+        """Convert to service request."""
+        return ControlledPaperObservationRequest(**self.model_dump())
 
 
 class OptionsScannerRequestBody(BaseModel):
@@ -1120,6 +1139,43 @@ def operator_fresh_observation_check() -> dict:
 def operator_paper_trade_approval_review() -> dict:
     """Return operator paper-trade approval review package."""
     return PaperTradeApprovalGate(settings=get_settings()).package()
+
+
+@router.get("/observation/controlled-paper/status")
+def controlled_paper_status() -> dict:
+    """Return controlled paper observation status."""
+    return ControlledPaperObservationService(settings=get_settings()).status()
+
+
+@router.post("/observation/controlled-paper/evaluate")
+def controlled_paper_evaluate(request: ControlledPaperRequestBody) -> dict:
+    """Evaluate controlled paper observation gates."""
+    return ControlledPaperObservationService(settings=get_settings()).evaluate(request.to_request())
+
+
+@router.post("/observation/controlled-paper/preview")
+def controlled_paper_preview(request: ControlledPaperRequestBody) -> dict:
+    """Create controlled paper previews only."""
+    return ControlledPaperObservationService(settings=get_settings()).preview(request.to_request())
+
+
+@router.post("/observation/controlled-paper/run-once")
+def controlled_paper_run_once(request: ControlledPaperRequestBody) -> dict:
+    """Run controlled paper observation once."""
+    return ControlledPaperObservationService(settings=get_settings()).run_once(request.to_request())
+
+
+@router.get("/observation/controlled-paper/recent")
+def controlled_paper_recent() -> dict:
+    """Return recent controlled paper observation runs."""
+    return ControlledPaperObservationService(settings=get_settings()).recent()
+
+
+@router.get("/operator/controlled-paper-observation")
+def operator_controlled_paper_observation() -> dict:
+    """Return operator controlled paper observation status."""
+    service = ControlledPaperObservationService(settings=get_settings())
+    return {"status": service.status(), "evaluation": service.evaluate(), "source": "crypto_hunter_operator_controlled_paper_observation_v1"}
 
 
 @router.get("/calibration/decision-gate")

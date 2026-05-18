@@ -18,6 +18,7 @@ class CommandSummaryBuilder:
             {"label": "Alerts preview", "command": r'Invoke-RestMethod -Uri "http://127.0.0.1:8000/alerts/preview"'},
             {"label": "Operator status", "command": r'Invoke-RestMethod -Uri "http://127.0.0.1:8000/operator/status"'},
             {"label": "Paper-trade approval review", "command": r'Invoke-RestMethod -Uri "http://127.0.0.1:8000/operator/paper-trade-approval-review"'},
+            {"label": "Controlled paper status", "command": r'Invoke-RestMethod -Uri "http://127.0.0.1:8000/observation/controlled-paper/status"'},
             {"label": "MooMoo status", "command": r'Invoke-RestMethod -Uri "http://127.0.0.1:8000/moomoo/status"'},
             {"label": "Stock candidates", "command": r'Invoke-RestMethod -Uri "http://127.0.0.1:8000/stock-hunter/top-candidates"'},
             {"label": "Options scanner top", "command": r'Invoke-RestMethod -Uri "http://127.0.0.1:8000/options-scanner/top"'},

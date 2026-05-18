@@ -4,7 +4,7 @@ Crypto Hunter is a backend trading engine for a sophisticated crypto trading bot
 
 ## Current Phase
 
-Phase 34 paper-trade approval gate:
+Phase 35 controlled paper observation:
 
 - Clean Python backend project
 - FastAPI health and status endpoints
@@ -42,6 +42,7 @@ Phase 34 paper-trade approval gate:
 - Clean observation verification and legacy-aware readiness that treat legacy risk records as audit warnings while current inconsistencies still block
 - Fresh observation-window validation that proves post-remediation observation risk decisions persist cleanly while paper/live trading stay disabled
 - Paper-trade approval gate that packages safety, fresh validation, risk hygiene, readiness, and operator review evidence without enabling paper trades
+- Controlled paper observation infrastructure with approval gates, preview-only defaults, operator acknowledgement, notional caps, and PaperBroker-only synthetic execution
 - Read-only real-data validation helpers, scripts, and local Windows runbook for Kraken public data and optional MooMoo/OpenD checks
 - Production-style report filtering, journal hygiene previews, deduped daily briefings, and paper-observation readiness checks
 - Manual paper observation mode for Kraken public data, signal generation, risk evaluation, observation logs, and observation reports
@@ -925,6 +926,33 @@ Invoke-RestMethod -Uri "http://127.0.0.1:8000/operator/paper-trade-approval-revi
 
 Even when the gate returns `ELIGIBLE_FOR_OPERATOR_REVIEW`, `approved_for_paper_trade_observation=false` and `paper_trade_observation_enabled=false` remain enforced in this phase.
 
+## Phase 35 Controlled Paper Observation
+
+Phase 35 adds locked, approval-gated controlled paper observation infrastructure. It is disabled by default and creates previews only unless a future operator-controlled paper-only configuration explicitly enables PaperBroker execution.
+
+Docs:
+
+- [Controlled Paper Observation Phase 35](docs/CONTROLLED_PAPER_OBSERVATION_PHASE35.md)
+
+Controlled paper endpoints:
+
+- `GET /observation/controlled-paper/status`
+- `POST /observation/controlled-paper/evaluate`
+- `POST /observation/controlled-paper/preview`
+- `POST /observation/controlled-paper/run-once`
+- `GET /observation/controlled-paper/recent`
+- `GET /operator/controlled-paper-observation`
+
+Examples:
+
+```powershell
+Invoke-RestMethod -Uri "http://127.0.0.1:8000/observation/controlled-paper/status"
+Invoke-RestMethod -Method Post -Uri "http://127.0.0.1:8000/observation/controlled-paper/preview" -ContentType "application/json" -Body '{"manual_start":true,"operator_acknowledged":true,"allow_paper_trade_preview":true,"allow_paper_trade_execution":false}'
+Invoke-RestMethod -Uri "http://127.0.0.1:8000/operator/controlled-paper-observation"
+```
+
+Default behavior creates zero paper trades. Live trading and real exchange execution remain unavailable.
+
 ## Safety Defaults
 
 The default configuration is intentionally conservative:
@@ -933,7 +961,7 @@ The default configuration is intentionally conservative:
 - `ENABLE_LIVE_TRADING=false`
 - `REQUIRE_LIVE_CONFIRMATION=true`
 - `LiveBroker` refuses orders unless every live safety condition passes
-- `ExecutionGuard` always reports live execution unavailable in Phase 34
+- `ExecutionGuard` always reports live execution unavailable in Phase 35
 - `SafetyAudit` must pass before future execution work
 - Exchange API secrets are never returned by API routes
 - No withdrawal functionality exists in this repository
@@ -1257,6 +1285,7 @@ Invoke-RestMethod -Uri "http://127.0.0.1:8000/observation/fresh-validation"
 Invoke-RestMethod -Uri "http://127.0.0.1:8000/operator/fresh-observation-check"
 Invoke-RestMethod -Uri "http://127.0.0.1:8000/observation/paper-trade-approval"
 Invoke-RestMethod -Uri "http://127.0.0.1:8000/operator/paper-trade-approval-review"
+Invoke-RestMethod -Uri "http://127.0.0.1:8000/observation/controlled-paper/status"
 Invoke-RestMethod -Uri "http://127.0.0.1:8000/risk/readiness"
 ```
 
@@ -1268,4 +1297,4 @@ Invoke-RestMethod -Uri "http://127.0.0.1:8000/risk/readiness"
 
 ## Live Trading Warning
 
-Live trading is locked down and not implemented in Phase 34. Kraken private access is read-only account data only. MooMoo is read-only market data only. Stock/Options Hunter, Options Scanner, alerts, unified reports, operator tooling, validation tooling, journal hygiene, risk hygiene, paper-trade readiness, paper-trade approval, observation readiness, paper observation, observation persistence, observation windows, early recovery watchlist, decision gates, and calibration are read-only or paper-only scanner/research/reporting/status/checking modes. Real order placement, live sell execution, live cancel execution, withdrawals, transfers, funding, staking, margin trading, options execution, external alert delivery, and Coinbase integration are not implemented in this phase. Reporting, alerts, operator, validation, journal hygiene, risk hygiene, paper-trade readiness, paper-trade approval, observation, observation history, observation window, early recovery, decision gate, calibration, system, diagnostics, MooMoo, Stock/Options Hunter, and Options Scanner endpoints do not perform real exchange execution. Dry-run execution is only a preview, and paper/backtest/smoke-test/scanner/reporting/validation/observation/calibration/decision/watchlist/readiness/approval results do not guarantee live performance.
+Live trading is locked down and not implemented in Phase 35. Kraken private access is read-only account data only. MooMoo is read-only market data only. Stock/Options Hunter, Options Scanner, alerts, unified reports, operator tooling, validation tooling, journal hygiene, risk hygiene, paper-trade readiness, paper-trade approval, controlled paper observation, observation readiness, paper observation, observation persistence, observation windows, early recovery watchlist, decision gates, and calibration are read-only or paper-only scanner/research/reporting/status/checking modes. Real order placement, live sell execution, live cancel execution, withdrawals, transfers, funding, staking, margin trading, options execution, external alert delivery, and Coinbase integration are not implemented in this phase. Reporting, alerts, operator, validation, journal hygiene, risk hygiene, paper-trade readiness, paper-trade approval, controlled paper observation, observation, observation history, observation window, early recovery, decision gate, calibration, system, diagnostics, MooMoo, Stock/Options Hunter, and Options Scanner endpoints do not perform real exchange execution. Dry-run execution is only a preview, and paper/backtest/smoke-test/scanner/reporting/validation/observation/calibration/decision/watchlist/readiness/approval/controlled-paper results do not guarantee live performance.
