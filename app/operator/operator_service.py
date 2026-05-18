@@ -15,6 +15,7 @@ from app.observation.fresh_observation_validator import FreshObservationValidato
 from app.observation.paper_trade_approval_gate import PaperTradeApprovalGate
 from app.observation.controlled_paper_observation import ControlledPaperObservationService
 from app.observation.controlled_paper_audit import ControlledPaperAuditService
+from app.observation.controlled_paper_preflight import ControlledPaperPreflightService
 from app.observation.controlled_paper_review import ControlledPaperReviewService
 from app.reporting.unified_report_service import UnifiedReportService
 
@@ -38,6 +39,7 @@ class OperatorService:
         controlled_paper: ControlledPaperObservationService | None = None,
         controlled_review: ControlledPaperReviewService | None = None,
         controlled_audit: ControlledPaperAuditService | None = None,
+        controlled_preflight: ControlledPaperPreflightService | None = None,
     ) -> None:
         """Initialize operator dependencies."""
         self.settings = settings or get_settings()
@@ -54,6 +56,7 @@ class OperatorService:
         self.controlled_paper = controlled_paper or ControlledPaperObservationService(settings=self.settings)
         self.controlled_review = controlled_review or ControlledPaperReviewService(settings=self.settings)
         self.controlled_audit = controlled_audit or ControlledPaperAuditService(settings=self.settings)
+        self.controlled_preflight = controlled_preflight or ControlledPaperPreflightService(settings=self.settings)
 
     def get_operator_status(self) -> dict:
         """Return standalone operator status."""
@@ -109,6 +112,8 @@ class OperatorService:
             actions.append("Controlled paper observation is disabled by config.")
         audit = self._safe(lambda: self.controlled_audit.audit(), {"recommended_next_actions": []})
         actions.extend(audit.get("recommended_next_actions") or [])
+        preflight = self._safe(lambda: self.controlled_preflight.evaluate(), {"recommended_next_actions": []})
+        actions.extend(preflight.get("recommended_next_actions") or [])
         return list(dict.fromkeys(actions))
 
     def _fresh_warnings(self) -> list[str]:
@@ -130,6 +135,9 @@ class OperatorService:
         audit = self._safe(lambda: self.controlled_audit.audit(), {})
         if not audit.get("passed", True):
             warnings.append("Controlled paper guardrail audit has blockers.")
+        preflight = self._safe(lambda: self.controlled_preflight.evaluate(), {})
+        if preflight.get("preflight_status") in {"OBSERVE_ONLY", "NOT_READY"}:
+            warnings.append("Controlled paper preflight is not ready for activation.")
         return warnings
 
     def _safe(self, fn, default):

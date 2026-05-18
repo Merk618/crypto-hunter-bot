@@ -38,6 +38,7 @@ from app.observation.clean_observation_verifier import CleanObservationVerifier
 from app.observation.controlled_paper_models import ControlledPaperObservationRequest
 from app.observation.controlled_paper_audit import ControlledPaperAuditService
 from app.observation.controlled_paper_observation import ControlledPaperObservationService
+from app.observation.controlled_paper_preflight import ControlledPaperPreflightService
 from app.observation.controlled_paper_review import ControlledPaperReviewService
 from app.observation.early_recovery import EarlyRecoveryClassifier
 from app.observation.early_recovery_watchlist import EarlyRecoveryWatchlistService
@@ -1207,6 +1208,36 @@ def operator_controlled_paper_review() -> dict:
         "audit": ControlledPaperAuditService(settings=settings).audit(),
         "source": "crypto_hunter_operator_controlled_paper_review_v1",
     }
+
+
+@router.get("/observation/controlled-paper/preflight")
+def controlled_paper_preflight() -> dict:
+    """Return controlled paper activation preflight."""
+    return ControlledPaperPreflightService(settings=get_settings()).evaluate()
+
+
+@router.get("/observation/controlled-paper/preflight/checks")
+def controlled_paper_preflight_checks() -> dict:
+    """Return controlled paper preflight checks."""
+    return ControlledPaperPreflightService(settings=get_settings()).checks()
+
+
+@router.get("/observation/controlled-paper/activation-plan")
+def controlled_paper_activation_plan() -> dict:
+    """Return read-only controlled paper activation plan."""
+    return ControlledPaperPreflightService(settings=get_settings()).activation_plan()
+
+
+@router.get("/observation/controlled-paper/preflight-package")
+def controlled_paper_preflight_package() -> dict:
+    """Return complete controlled paper preflight package."""
+    return ControlledPaperPreflightService(settings=get_settings()).package()
+
+
+@router.get("/operator/controlled-paper-preflight")
+def operator_controlled_paper_preflight() -> dict:
+    """Return operator controlled paper preflight package."""
+    return ControlledPaperPreflightService(settings=get_settings()).package()
 
 
 @router.get("/calibration/decision-gate")
