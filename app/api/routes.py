@@ -39,6 +39,7 @@ from app.observation.controlled_paper_models import ControlledPaperObservationRe
 from app.observation.controlled_paper_audit import ControlledPaperAuditService
 from app.observation.controlled_paper_observation import ControlledPaperObservationService
 from app.observation.controlled_paper_preflight import ControlledPaperPreflightService
+from app.observation.controlled_paper_preflight_review import ControlledPaperPreflightReviewService
 from app.observation.controlled_paper_review import ControlledPaperReviewService
 from app.observation.early_recovery import EarlyRecoveryClassifier
 from app.observation.early_recovery_watchlist import EarlyRecoveryWatchlistService
@@ -1238,6 +1239,36 @@ def controlled_paper_preflight_package() -> dict:
 def operator_controlled_paper_preflight() -> dict:
     """Return operator controlled paper preflight package."""
     return ControlledPaperPreflightService(settings=get_settings()).package()
+
+
+@router.get("/observation/controlled-paper/decision")
+def controlled_paper_decision() -> dict:
+    """Return controlled paper preflight review decision."""
+    return ControlledPaperPreflightReviewService(settings=get_settings()).decide()
+
+
+@router.get("/observation/controlled-paper/decision/checks")
+def controlled_paper_decision_checks() -> dict:
+    """Return controlled paper decision checks."""
+    return ControlledPaperPreflightReviewService(settings=get_settings()).checks()
+
+
+@router.get("/observation/controlled-paper/decision-package")
+def controlled_paper_decision_package() -> dict:
+    """Return complete controlled paper decision package."""
+    return ControlledPaperPreflightReviewService(settings=get_settings()).package()
+
+
+@router.get("/operator/controlled-paper-decision")
+def operator_controlled_paper_decision() -> dict:
+    """Return operator controlled paper decision package."""
+    return ControlledPaperPreflightReviewService(settings=get_settings()).package()
+
+
+@router.get("/operator/controlled-paper-next-step")
+def operator_controlled_paper_next_step() -> dict:
+    """Return compact controlled paper next step."""
+    return ControlledPaperPreflightReviewService(settings=get_settings()).next_step()
 
 
 @router.get("/calibration/decision-gate")

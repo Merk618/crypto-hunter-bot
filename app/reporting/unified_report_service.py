@@ -11,6 +11,7 @@ from app.observation.clean_observation_verifier import CleanObservationVerifier
 from app.observation.controlled_paper_audit import ControlledPaperAuditService
 from app.observation.controlled_paper_observation import ControlledPaperObservationService
 from app.observation.controlled_paper_preflight import ControlledPaperPreflightService
+from app.observation.controlled_paper_preflight_review import ControlledPaperPreflightReviewService
 from app.observation.controlled_paper_review import ControlledPaperReviewService
 from app.observation.early_recovery_watchlist import EarlyRecoveryWatchlistService
 from app.observation.fresh_observation_validator import FreshObservationValidator
@@ -91,6 +92,7 @@ class UnifiedReportService:
             "controlled_paper_review": self._safe(lambda: ControlledPaperReviewService(settings=self.settings).review(), {"paper_trades_created": 0, "recent_runs_count": 0}),
             "controlled_paper_audit": self._safe(lambda: ControlledPaperAuditService(settings=self.settings).audit(), {"passed": True, "blockers": []}),
             "controlled_paper_preflight": self._safe(lambda: ControlledPaperPreflightService(settings=self.settings).evaluate(), {"preflight_status": "NOT_READY", "activation_eligible": False}),
+            "controlled_paper_decision": self._safe(lambda: ControlledPaperPreflightReviewService(settings=self.settings).decide(), {"decision": "CONTINUE_OBSERVATION_ONLY", "allow_paper_activation": False, "allow_live_review": False}),
             "paper_trade_readiness": self._safe(lambda: PaperTradeReadinessService(settings=self.settings).check(), {"ready": False, "decision": "NOT_READY"}),
             "safety": {
                 "passed": bool(safety.get("passed", False)),
@@ -168,6 +170,11 @@ class UnifiedReportService:
         preflight = health.get("controlled_paper_preflight", {})
         if preflight.get("preflight_status") in {"OBSERVE_ONLY", "NOT_READY"}:
             warnings.append("Controlled paper preflight is not ready for activation.")
+        decision = health.get("controlled_paper_decision", {})
+        if decision.get("decision") in {"CONTINUE_OBSERVATION_ONLY", "COLLECT_MORE_OBSERVATIONS"}:
+            warnings.append("Controlled paper decision remains observation-only; Phase 38 does not enable paper or live trading.")
+        if decision.get("decision") in {"BLOCKED", "FIX_GUARDRAILS"}:
+            warnings.append("Controlled paper decision has guardrail blockers.")
         return warnings
 
     def _safe(self, fn, default):

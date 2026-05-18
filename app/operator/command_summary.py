@@ -21,6 +21,7 @@ class CommandSummaryBuilder:
             {"label": "Controlled paper status", "command": r'Invoke-RestMethod -Uri "http://127.0.0.1:8000/observation/controlled-paper/status"'},
             {"label": "Controlled paper audit", "command": r'Invoke-RestMethod -Uri "http://127.0.0.1:8000/observation/controlled-paper/audit"'},
             {"label": "Controlled paper preflight", "command": r'Invoke-RestMethod -Uri "http://127.0.0.1:8000/observation/controlled-paper/preflight"'},
+            {"label": "Controlled paper decision", "command": r'Invoke-RestMethod -Uri "http://127.0.0.1:8000/observation/controlled-paper/decision"'},
             {"label": "MooMoo status", "command": r'Invoke-RestMethod -Uri "http://127.0.0.1:8000/moomoo/status"'},
             {"label": "Stock candidates", "command": r'Invoke-RestMethod -Uri "http://127.0.0.1:8000/stock-hunter/top-candidates"'},
             {"label": "Options scanner top", "command": r'Invoke-RestMethod -Uri "http://127.0.0.1:8000/options-scanner/top"'},

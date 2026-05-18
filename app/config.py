@@ -281,6 +281,21 @@ class Settings(BaseSettings):
     controlled_paper_preflight_require_disabled_defaults: bool = Field(default=True, alias="CONTROLLED_PAPER_PREFLIGHT_REQUIRE_DISABLED_DEFAULTS")
     controlled_paper_preflight_require_operator_ack: bool = Field(default=True, alias="CONTROLLED_PAPER_PREFLIGHT_REQUIRE_OPERATOR_ACK")
     controlled_paper_preflight_allow_config_mutation: bool = Field(default=False, alias="CONTROLLED_PAPER_PREFLIGHT_ALLOW_CONFIG_MUTATION")
+    controlled_paper_preflight_review_enabled: bool = Field(default=True, alias="CONTROLLED_PAPER_PREFLIGHT_REVIEW_ENABLED")
+    controlled_paper_decision_require_preflight: bool = Field(default=True, alias="CONTROLLED_PAPER_DECISION_REQUIRE_PREFLIGHT")
+    controlled_paper_decision_require_audit_pass: bool = Field(default=True, alias="CONTROLLED_PAPER_DECISION_REQUIRE_AUDIT_PASS")
+    controlled_paper_decision_require_fresh_validation: bool = Field(default=True, alias="CONTROLLED_PAPER_DECISION_REQUIRE_FRESH_VALIDATION")
+    controlled_paper_decision_require_approval_eligible: bool = Field(default=True, alias="CONTROLLED_PAPER_DECISION_REQUIRE_APPROVAL_ELIGIBLE")
+    controlled_paper_decision_require_strong_buy: bool = Field(default=True, alias="CONTROLLED_PAPER_DECISION_REQUIRE_STRONG_BUY")
+    controlled_paper_decision_require_risk_approved: bool = Field(default=True, alias="CONTROLLED_PAPER_DECISION_REQUIRE_RISK_APPROVED")
+    controlled_paper_decision_require_current_risk_clean: bool = Field(default=True, alias="CONTROLLED_PAPER_DECISION_REQUIRE_CURRENT_RISK_CLEAN")
+    controlled_paper_decision_allow_legacy_warnings: bool = Field(default=True, alias="CONTROLLED_PAPER_DECISION_ALLOW_LEGACY_WARNINGS")
+    controlled_paper_decision_min_completed_runs: int = Field(default=5, ge=1, alias="CONTROLLED_PAPER_DECISION_MIN_COMPLETED_RUNS")
+    controlled_paper_decision_min_observations: int = Field(default=20, ge=1, alias="CONTROLLED_PAPER_DECISION_MIN_OBSERVATIONS")
+    controlled_paper_decision_min_strong_buy_count: int = Field(default=1, ge=0, alias="CONTROLLED_PAPER_DECISION_MIN_STRONG_BUY_COUNT")
+    controlled_paper_decision_min_risk_approved_count: int = Field(default=1, ge=0, alias="CONTROLLED_PAPER_DECISION_MIN_RISK_APPROVED_COUNT")
+    controlled_paper_decision_allow_config_review: bool = Field(default=False, alias="CONTROLLED_PAPER_DECISION_ALLOW_CONFIG_REVIEW")
+    controlled_paper_decision_allow_activation: bool = Field(default=False, alias="CONTROLLED_PAPER_DECISION_ALLOW_ACTIVATION")
     risk_hygiene_enabled: bool = Field(default=True, alias="RISK_HYGIENE_ENABLED")
     risk_hygiene_preview_only: bool = Field(default=True, alias="RISK_HYGIENE_PREVIEW_ONLY")
     risk_hygiene_classify_legacy_records: bool = Field(default=True, alias="RISK_HYGIENE_CLASSIFY_LEGACY_RECORDS")
@@ -374,6 +389,8 @@ class Settings(BaseSettings):
             raise ValueError("CONTROLLED_PAPER_OBSERVATION_ALLOW_SELLS must remain false in this phase")
         if self.controlled_paper_preflight_allow_config_mutation:
             raise ValueError("CONTROLLED_PAPER_PREFLIGHT_ALLOW_CONFIG_MUTATION must remain false in this phase")
+        if self.controlled_paper_decision_allow_activation:
+            raise ValueError("CONTROLLED_PAPER_DECISION_ALLOW_ACTIVATION must remain false in this phase")
         if not self.risk_hygiene_preview_only or self.risk_hygiene_allow_destructive_cleanup:
             raise ValueError("Risk hygiene must remain preview-only with destructive cleanup disabled")
         return self
