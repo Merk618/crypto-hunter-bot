@@ -24,6 +24,8 @@ class CommandSummaryBuilder:
             {"label": "Controlled paper decision", "command": r'Invoke-RestMethod -Uri "http://127.0.0.1:8000/observation/controlled-paper/decision"'},
             {"label": "Signal quality review", "command": r'Invoke-RestMethod -Uri "http://127.0.0.1:8000/observation/signal-quality"'},
             {"label": "Observation next step", "command": r'Invoke-RestMethod -Uri "http://127.0.0.1:8000/operator/observation-next-step"'},
+            {"label": "Strategy review checkpoint", "command": r'Invoke-RestMethod -Uri "http://127.0.0.1:8000/strategy/review-checkpoint"'},
+            {"label": "Extended observation plan", "command": r'Invoke-RestMethod -Uri "http://127.0.0.1:8000/strategy/extended-observation-plan"'},
             {"label": "MooMoo status", "command": r'Invoke-RestMethod -Uri "http://127.0.0.1:8000/moomoo/status"'},
             {"label": "Stock candidates", "command": r'Invoke-RestMethod -Uri "http://127.0.0.1:8000/stock-hunter/top-candidates"'},
             {"label": "Options scanner top", "command": r'Invoke-RestMethod -Uri "http://127.0.0.1:8000/options-scanner/top"'},

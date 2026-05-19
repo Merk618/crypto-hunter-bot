@@ -310,6 +310,20 @@ class Settings(BaseSettings):
     observation_continuation_allow_threshold_changes: bool = Field(default=False, alias="OBSERVATION_CONTINUATION_ALLOW_THRESHOLD_CHANGES")
     observation_continuation_allow_paper_trades: bool = Field(default=False, alias="OBSERVATION_CONTINUATION_ALLOW_PAPER_TRADES")
     observation_continuation_allow_live_review: bool = Field(default=False, alias="OBSERVATION_CONTINUATION_ALLOW_LIVE_REVIEW")
+    strategy_review_checkpoint_enabled: bool = Field(default=True, alias="STRATEGY_REVIEW_CHECKPOINT_ENABLED")
+    strategy_review_min_observations: int = Field(default=20, ge=1, alias="STRATEGY_REVIEW_MIN_OBSERVATIONS")
+    strategy_review_min_completed_runs: int = Field(default=5, ge=1, alias="STRATEGY_REVIEW_MIN_COMPLETED_RUNS")
+    strategy_review_require_safety_audit: bool = Field(default=True, alias="STRATEGY_REVIEW_REQUIRE_SAFETY_AUDIT")
+    strategy_review_require_live_locked: bool = Field(default=True, alias="STRATEGY_REVIEW_REQUIRE_LIVE_LOCKED")
+    strategy_review_require_addorder_absent: bool = Field(default=True, alias="STRATEGY_REVIEW_REQUIRE_ADDORDER_ABSENT")
+    strategy_review_allow_threshold_changes: bool = Field(default=False, alias="STRATEGY_REVIEW_ALLOW_THRESHOLD_CHANGES")
+    strategy_review_allow_paper_trades: bool = Field(default=False, alias="STRATEGY_REVIEW_ALLOW_PAPER_TRADES")
+    strategy_review_allow_live_review: bool = Field(default=False, alias="STRATEGY_REVIEW_ALLOW_LIVE_REVIEW")
+    extended_observation_plan_enabled: bool = Field(default=True, alias="EXTENDED_OBSERVATION_PLAN_ENABLED")
+    extended_observation_target_runs: int = Field(default=10, ge=1, alias="EXTENDED_OBSERVATION_TARGET_RUNS")
+    extended_observation_target_observations: int = Field(default=40, ge=1, alias="EXTENDED_OBSERVATION_TARGET_OBSERVATIONS")
+    extended_observation_review_after_runs: int = Field(default=5, ge=1, alias="EXTENDED_OBSERVATION_REVIEW_AFTER_RUNS")
+    extended_observation_include_early_recovery: bool = Field(default=True, alias="EXTENDED_OBSERVATION_INCLUDE_EARLY_RECOVERY")
     risk_hygiene_enabled: bool = Field(default=True, alias="RISK_HYGIENE_ENABLED")
     risk_hygiene_preview_only: bool = Field(default=True, alias="RISK_HYGIENE_PREVIEW_ONLY")
     risk_hygiene_classify_legacy_records: bool = Field(default=True, alias="RISK_HYGIENE_CLASSIFY_LEGACY_RECORDS")
@@ -407,6 +421,8 @@ class Settings(BaseSettings):
             raise ValueError("CONTROLLED_PAPER_DECISION_ALLOW_ACTIVATION must remain false in this phase")
         if self.observation_continuation_allow_threshold_changes or self.observation_continuation_allow_paper_trades or self.observation_continuation_allow_live_review:
             raise ValueError("Observation continuation must not change thresholds or allow paper/live trading")
+        if self.strategy_review_allow_threshold_changes or self.strategy_review_allow_paper_trades or self.strategy_review_allow_live_review:
+            raise ValueError("Strategy review must not change thresholds or allow paper/live trading")
         if not self.risk_hygiene_preview_only or self.risk_hygiene_allow_destructive_cleanup:
             raise ValueError("Risk hygiene must remain preview-only with destructive cleanup disabled")
         return self

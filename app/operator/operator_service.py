@@ -12,6 +12,7 @@ from app.operator.command_summary import CommandSummaryBuilder
 from app.operator.operator_models import OperatorStatus
 from app.operator.startup_checks import StartupChecks
 from app.observation.fresh_observation_validator import FreshObservationValidator
+from app.observation.extended_observation_plan import ExtendedObservationPlanService
 from app.observation.observation_continuation import ObservationContinuationService
 from app.observation.paper_trade_approval_gate import PaperTradeApprovalGate
 from app.observation.controlled_paper_observation import ControlledPaperObservationService
@@ -20,6 +21,7 @@ from app.observation.controlled_paper_preflight import ControlledPaperPreflightS
 from app.observation.controlled_paper_preflight_review import ControlledPaperPreflightReviewService
 from app.observation.controlled_paper_review import ControlledPaperReviewService
 from app.observation.signal_quality_review import SignalQualityReviewService
+from app.observation.strategy_review_checkpoint import StrategyReviewCheckpointService
 from app.reporting.unified_report_service import UnifiedReportService
 
 
@@ -46,6 +48,8 @@ class OperatorService:
         controlled_decision: ControlledPaperPreflightReviewService | None = None,
         signal_quality: SignalQualityReviewService | None = None,
         observation_continuation: ObservationContinuationService | None = None,
+        strategy_checkpoint: StrategyReviewCheckpointService | None = None,
+        extended_observation_plan: ExtendedObservationPlanService | None = None,
     ) -> None:
         """Initialize operator dependencies."""
         self.settings = settings or get_settings()
@@ -66,6 +70,8 @@ class OperatorService:
         self.controlled_decision = controlled_decision or ControlledPaperPreflightReviewService(settings=self.settings)
         self.signal_quality = signal_quality or SignalQualityReviewService(settings=self.settings)
         self.observation_continuation = observation_continuation or ObservationContinuationService(settings=self.settings, signal_quality=self.signal_quality, controlled_decision=self.controlled_decision)
+        self.strategy_checkpoint = strategy_checkpoint or StrategyReviewCheckpointService(settings=self.settings, signal_quality=self.signal_quality, controlled_decision=self.controlled_decision)
+        self.extended_observation_plan = extended_observation_plan or ExtendedObservationPlanService(settings=self.settings, checkpoint_service=self.strategy_checkpoint)
 
     def get_operator_status(self) -> dict:
         """Return standalone operator status."""
@@ -129,6 +135,11 @@ class OperatorService:
         actions.extend(quality.get("recommended_next_actions") or [])
         continuation = self._safe(lambda: self.observation_continuation.plan(), {"recommended_next_actions": []})
         actions.extend(continuation.get("recommended_next_actions") or [])
+        checkpoint = self._safe(lambda: self.strategy_checkpoint.checkpoint(), {"recommended_next_actions": []})
+        actions.extend(checkpoint.get("recommended_next_actions") or [])
+        extended = self._safe(lambda: self.extended_observation_plan.plan(), {"recommended_commands": []})
+        if extended.get("observe_only"):
+            actions.append("Use the extended observation plan before any further paper-review discussion.")
         return list(dict.fromkeys(actions))
 
     def _fresh_warnings(self) -> list[str]:
@@ -164,6 +175,9 @@ class OperatorService:
         continuation = self._safe(lambda: self.observation_continuation.plan(), {})
         if continuation.get("decision") in {"CONTINUE_OBSERVATION_ONLY", "COLLECT_MORE_OBSERVATIONS"}:
             warnings.append("Observation continuation remains read-only.")
+        checkpoint = self._safe(lambda: self.strategy_checkpoint.checkpoint(), {})
+        if checkpoint.get("decision") in {"CONTINUE_OBSERVATION_ONLY", "EXTEND_OBSERVATION_WINDOW"}:
+            warnings.append("Strategy checkpoint recommends observation-only or extended observation.")
         return warnings
 
     def _safe(self, fn, default):

@@ -4,7 +4,7 @@ Crypto Hunter is a backend trading engine for a sophisticated crypto trading bot
 
 ## Current Phase
 
-Phase 39 observation continuation and signal quality review:
+Phase 40 strategy review checkpoint and extended observation plan:
 
 - Clean Python backend project
 - FastAPI health and status endpoints
@@ -979,7 +979,33 @@ Invoke-RestMethod -Uri "http://127.0.0.1:8000/observation/controlled-paper/guard
 Invoke-RestMethod -Uri "http://127.0.0.1:8000/operator/controlled-paper-review"
 ```
 
-Passing guardrails, decision checks, and signal-quality review means the controlled paper infrastructure is still safe to observe. It does not enable paper trades or live trading.
+Passing guardrails, decision checks, signal-quality review, and the strategy checkpoint means the controlled paper infrastructure is still safe to observe. It does not enable paper trades or live trading.
+
+## Phase 40 Strategy Review Checkpoint
+
+Phase 40 adds a formal strategy checkpoint that combines signal-quality review, calibration, early recovery, controlled-paper decision, paper-trade readiness, fresh validation, risk hygiene, and safety audit outputs. It also creates an extended observation plan for collecting a larger persisted sample before any future paper-review discussion.
+
+Docs:
+
+- [Strategy Review Checkpoint Phase 40](docs/STRATEGY_REVIEW_CHECKPOINT_PHASE40.md)
+
+Strategy review endpoints:
+
+- `GET /strategy/review-checkpoint`
+- `GET /strategy/extended-observation-plan`
+- `GET /strategy/review-package`
+- `GET /operator/strategy-review`
+- `GET /operator/extended-observation-next-step`
+
+Examples:
+
+```powershell
+Invoke-RestMethod -Uri "http://127.0.0.1:8000/strategy/review-checkpoint"
+Invoke-RestMethod -Uri "http://127.0.0.1:8000/strategy/extended-observation-plan"
+Invoke-RestMethod -Uri "http://127.0.0.1:8000/operator/extended-observation-next-step"
+```
+
+Expected conservative output remains observation-only or an extended observation window unless repeated `STRONG_BUY` and risk-approved observations appear. Phase 40 does not change thresholds and does not enable paper or live trading.
 
 ## Phase 39 Signal Quality Review And Observation Continuation
 
@@ -1068,7 +1094,7 @@ The default configuration is intentionally conservative:
 - `ENABLE_LIVE_TRADING=false`
 - `REQUIRE_LIVE_CONFIRMATION=true`
 - `LiveBroker` refuses orders unless every live safety condition passes
-- `ExecutionGuard` always reports live execution unavailable in Phase 39
+- `ExecutionGuard` always reports live execution unavailable in Phase 40
 - `SafetyAudit` must pass before future execution work
 - Exchange API secrets are never returned by API routes
 - No withdrawal functionality exists in this repository
@@ -1406,4 +1432,4 @@ Invoke-RestMethod -Uri "http://127.0.0.1:8000/risk/readiness"
 
 ## Live Trading Warning
 
-Live trading is locked down and not implemented in Phase 39. Kraken private access is read-only account data only. MooMoo is read-only market data only. Stock/Options Hunter, Options Scanner, alerts, unified reports, operator tooling, validation tooling, journal hygiene, risk hygiene, paper-trade readiness, paper-trade approval, controlled paper observation, controlled paper review, controlled paper preflight, controlled paper decision review, signal quality review, observation continuation, observation readiness, paper observation, observation persistence, observation windows, early recovery watchlist, decision gates, and calibration are read-only or paper-only scanner/research/reporting/status/checking modes. Real order placement, live sell execution, live cancel execution, withdrawals, transfers, funding, staking, margin trading, options execution, external alert delivery, and Coinbase integration are not implemented in this phase. Reporting, alerts, operator, validation, journal hygiene, risk hygiene, paper-trade readiness, paper-trade approval, controlled paper observation, controlled paper review, controlled paper preflight, controlled paper decision, signal quality, observation continuation, observation history, observation window, early recovery, decision gate, calibration, system, diagnostics, MooMoo, Stock/Options Hunter, and Options Scanner endpoints do not perform real exchange execution. Dry-run execution is only a preview, and paper/backtest/smoke-test/scanner/reporting/validation/observation/calibration/decision/watchlist/readiness/approval/controlled-paper/review/preflight/signal-quality results do not guarantee live performance.
+Live trading is locked down and not implemented in Phase 40. Kraken private access is read-only account data only. MooMoo is read-only market data only. Stock/Options Hunter, Options Scanner, alerts, unified reports, operator tooling, validation tooling, journal hygiene, risk hygiene, paper-trade readiness, paper-trade approval, controlled paper observation, controlled paper review, controlled paper preflight, controlled paper decision review, signal quality review, strategy review checkpoint, extended observation plan, observation continuation, observation readiness, paper observation, observation persistence, observation windows, early recovery watchlist, decision gates, and calibration are read-only or paper-only scanner/research/reporting/status/checking modes. Real order placement, live sell execution, live cancel execution, withdrawals, transfers, funding, staking, margin trading, options execution, external alert delivery, and Coinbase integration are not implemented in this phase. Reporting, alerts, operator, validation, journal hygiene, risk hygiene, paper-trade readiness, paper-trade approval, controlled paper observation, controlled paper review, controlled paper preflight, controlled paper decision, signal quality, strategy review, extended observation plan, observation continuation, observation history, observation window, early recovery, decision gate, calibration, system, diagnostics, MooMoo, Stock/Options Hunter, and Options Scanner endpoints do not perform real exchange execution. Dry-run execution is only a preview, and paper/backtest/smoke-test/scanner/reporting/validation/observation/calibration/decision/watchlist/readiness/approval/controlled-paper/review/preflight/signal-quality/strategy-review results do not guarantee live performance.

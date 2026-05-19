@@ -43,6 +43,7 @@ from app.observation.controlled_paper_preflight_review import ControlledPaperPre
 from app.observation.controlled_paper_review import ControlledPaperReviewService
 from app.observation.early_recovery import EarlyRecoveryClassifier
 from app.observation.early_recovery_watchlist import EarlyRecoveryWatchlistService
+from app.observation.extended_observation_plan import ExtendedObservationPlanService
 from app.observation.fresh_observation_validator import FreshObservationValidator
 from app.observation.observation_hydration import ObservationHydrationService
 from app.observation.observation_continuation import ObservationContinuationService
@@ -52,6 +53,7 @@ from app.observation.paper_observation_engine import PaperObservationEngine
 from app.observation.paper_trade_approval_gate import PaperTradeApprovalGate
 from app.observation.paper_trade_readiness import PaperTradeReadinessService
 from app.observation.signal_quality_review import SignalQualityReviewService
+from app.observation.strategy_review_checkpoint import StrategyReviewCheckpointService
 from app.operator.operator_service import OperatorService
 from app.risk.risk_readiness import RiskReadiness
 from app.risk.risk_record_hygiene import RiskRecordHygiene
@@ -1314,6 +1316,44 @@ def operator_observation_next_step() -> dict:
         "live_review_allowed": False,
         "source": "crypto_hunter_operator_observation_next_step_v1",
     }
+
+
+@router.get("/strategy/review-checkpoint")
+def strategy_review_checkpoint() -> dict:
+    """Return formal strategy review checkpoint."""
+    return StrategyReviewCheckpointService(settings=get_settings()).checkpoint()
+
+
+@router.get("/strategy/extended-observation-plan")
+def strategy_extended_observation_plan() -> dict:
+    """Return extended observation plan."""
+    return ExtendedObservationPlanService(settings=get_settings()).plan()
+
+
+@router.get("/strategy/review-package")
+def strategy_review_package() -> dict:
+    """Return strategy review package."""
+    settings = get_settings()
+    checkpoint_service = StrategyReviewCheckpointService(settings=settings)
+    checkpoint = checkpoint_service.checkpoint()
+    return {
+        "checkpoint": checkpoint,
+        "extended_observation_plan": ExtendedObservationPlanService(settings=settings, checkpoint_service=checkpoint_service).plan(checkpoint),
+        "review_package": checkpoint_service.package(),
+        "source": "crypto_hunter_strategy_review_package_v1",
+    }
+
+
+@router.get("/operator/strategy-review")
+def operator_strategy_review() -> dict:
+    """Return operator strategy review."""
+    return StrategyReviewCheckpointService(settings=get_settings()).checkpoint()
+
+
+@router.get("/operator/extended-observation-next-step")
+def operator_extended_observation_next_step() -> dict:
+    """Return operator extended observation next step."""
+    return ExtendedObservationPlanService(settings=get_settings()).next_step()
 
 
 @router.get("/calibration/decision-gate")
