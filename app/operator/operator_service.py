@@ -12,12 +12,14 @@ from app.operator.command_summary import CommandSummaryBuilder
 from app.operator.operator_models import OperatorStatus
 from app.operator.startup_checks import StartupChecks
 from app.observation.fresh_observation_validator import FreshObservationValidator
+from app.observation.observation_continuation import ObservationContinuationService
 from app.observation.paper_trade_approval_gate import PaperTradeApprovalGate
 from app.observation.controlled_paper_observation import ControlledPaperObservationService
 from app.observation.controlled_paper_audit import ControlledPaperAuditService
 from app.observation.controlled_paper_preflight import ControlledPaperPreflightService
 from app.observation.controlled_paper_preflight_review import ControlledPaperPreflightReviewService
 from app.observation.controlled_paper_review import ControlledPaperReviewService
+from app.observation.signal_quality_review import SignalQualityReviewService
 from app.reporting.unified_report_service import UnifiedReportService
 
 
@@ -42,6 +44,8 @@ class OperatorService:
         controlled_audit: ControlledPaperAuditService | None = None,
         controlled_preflight: ControlledPaperPreflightService | None = None,
         controlled_decision: ControlledPaperPreflightReviewService | None = None,
+        signal_quality: SignalQualityReviewService | None = None,
+        observation_continuation: ObservationContinuationService | None = None,
     ) -> None:
         """Initialize operator dependencies."""
         self.settings = settings or get_settings()
@@ -60,6 +64,8 @@ class OperatorService:
         self.controlled_audit = controlled_audit or ControlledPaperAuditService(settings=self.settings)
         self.controlled_preflight = controlled_preflight or ControlledPaperPreflightService(settings=self.settings)
         self.controlled_decision = controlled_decision or ControlledPaperPreflightReviewService(settings=self.settings)
+        self.signal_quality = signal_quality or SignalQualityReviewService(settings=self.settings)
+        self.observation_continuation = observation_continuation or ObservationContinuationService(settings=self.settings, signal_quality=self.signal_quality, controlled_decision=self.controlled_decision)
 
     def get_operator_status(self) -> dict:
         """Return standalone operator status."""
@@ -119,6 +125,10 @@ class OperatorService:
         actions.extend(preflight.get("recommended_next_actions") or [])
         decision = self._safe(lambda: self.controlled_decision.decide(), {"recommended_next_actions": []})
         actions.extend(decision.get("recommended_next_actions") or [])
+        quality = self._safe(lambda: self.signal_quality.review(), {"recommended_next_actions": []})
+        actions.extend(quality.get("recommended_next_actions") or [])
+        continuation = self._safe(lambda: self.observation_continuation.plan(), {"recommended_next_actions": []})
+        actions.extend(continuation.get("recommended_next_actions") or [])
         return list(dict.fromkeys(actions))
 
     def _fresh_warnings(self) -> list[str]:
@@ -148,6 +158,12 @@ class OperatorService:
             warnings.append("Controlled paper decision remains observation-only.")
         if decision.get("decision") in {"BLOCKED", "FIX_GUARDRAILS"}:
             warnings.append("Controlled paper decision has guardrail blockers.")
+        quality = self._safe(lambda: self.signal_quality.review(), {})
+        if quality.get("strong_buy_count", 0) == 0:
+            warnings.append("Signal quality review has no STRONG_BUY observations.")
+        continuation = self._safe(lambda: self.observation_continuation.plan(), {})
+        if continuation.get("decision") in {"CONTINUE_OBSERVATION_ONLY", "COLLECT_MORE_OBSERVATIONS"}:
+            warnings.append("Observation continuation remains read-only.")
         return warnings
 
     def _safe(self, fn, default):

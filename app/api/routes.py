@@ -45,11 +45,13 @@ from app.observation.early_recovery import EarlyRecoveryClassifier
 from app.observation.early_recovery_watchlist import EarlyRecoveryWatchlistService
 from app.observation.fresh_observation_validator import FreshObservationValidator
 from app.observation.observation_hydration import ObservationHydrationService
+from app.observation.observation_continuation import ObservationContinuationService
 from app.observation.observation_readiness import ObservationReadinessChecker
 from app.observation.observation_session import ObservationSessionManager
 from app.observation.paper_observation_engine import PaperObservationEngine
 from app.observation.paper_trade_approval_gate import PaperTradeApprovalGate
 from app.observation.paper_trade_readiness import PaperTradeReadinessService
+from app.observation.signal_quality_review import SignalQualityReviewService
 from app.operator.operator_service import OperatorService
 from app.risk.risk_readiness import RiskReadiness
 from app.risk.risk_record_hygiene import RiskRecordHygiene
@@ -1269,6 +1271,49 @@ def operator_controlled_paper_decision() -> dict:
 def operator_controlled_paper_next_step() -> dict:
     """Return compact controlled paper next step."""
     return ControlledPaperPreflightReviewService(settings=get_settings()).next_step()
+
+
+@router.get("/observation/signal-quality")
+def observation_signal_quality() -> dict:
+    """Return persisted observation signal quality review."""
+    return SignalQualityReviewService(settings=get_settings()).review()
+
+
+@router.get("/observation/signal-quality/symbols")
+def observation_signal_quality_symbols() -> dict:
+    """Return signal quality symbol summaries."""
+    return SignalQualityReviewService(settings=get_settings()).symbols()
+
+
+@router.get("/observation/signal-quality/{symbol}")
+def observation_signal_quality_symbol(symbol: str) -> dict:
+    """Return signal quality for one symbol."""
+    return SignalQualityReviewService(settings=get_settings()).symbol(symbol)
+
+
+@router.get("/observation/continuation-plan")
+def observation_continuation_plan() -> dict:
+    """Return safe observation continuation plan."""
+    return ObservationContinuationService(settings=get_settings()).plan()
+
+
+@router.get("/operator/signal-quality-review")
+def operator_signal_quality_review() -> dict:
+    """Return operator signal quality review."""
+    return SignalQualityReviewService(settings=get_settings()).review()
+
+
+@router.get("/operator/observation-next-step")
+def operator_observation_next_step() -> dict:
+    """Return compact operator observation next step."""
+    plan = ObservationContinuationService(settings=get_settings()).plan()
+    return {
+        "decision": plan.get("decision"),
+        "next_step": (plan.get("recommended_next_actions") or ["Continue observation-only mode."])[0],
+        "paper_trades_allowed": False,
+        "live_review_allowed": False,
+        "source": "crypto_hunter_operator_observation_next_step_v1",
+    }
 
 
 @router.get("/calibration/decision-gate")

@@ -4,7 +4,7 @@ Crypto Hunter is a backend trading engine for a sophisticated crypto trading bot
 
 ## Current Phase
 
-Phase 38 controlled paper preflight review and observation decision:
+Phase 39 observation continuation and signal quality review:
 
 - Clean Python backend project
 - FastAPI health and status endpoints
@@ -979,7 +979,34 @@ Invoke-RestMethod -Uri "http://127.0.0.1:8000/observation/controlled-paper/guard
 Invoke-RestMethod -Uri "http://127.0.0.1:8000/operator/controlled-paper-review"
 ```
 
-Passing guardrails and decision checks means the controlled paper infrastructure is still safe to observe. It does not enable paper trades or live trading.
+Passing guardrails, decision checks, and signal-quality review means the controlled paper infrastructure is still safe to observe. It does not enable paper trades or live trading.
+
+## Phase 39 Signal Quality Review And Observation Continuation
+
+Phase 39 adds read-only signal-quality analysis for persisted observations. It summarizes score distribution, category counts, dominant blockers, early recovery candidates, near-buy-watch symbols, and the next safest observation step.
+
+Docs:
+
+- [Signal Quality Review Phase 39](docs/SIGNAL_QUALITY_REVIEW_PHASE39.md)
+
+Signal-quality endpoints:
+
+- `GET /observation/signal-quality`
+- `GET /observation/signal-quality/symbols`
+- `GET /observation/signal-quality/{symbol}`
+- `GET /observation/continuation-plan`
+- `GET /operator/signal-quality-review`
+- `GET /operator/observation-next-step`
+
+Examples:
+
+```powershell
+Invoke-RestMethod -Uri "http://127.0.0.1:8000/observation/signal-quality"
+Invoke-RestMethod -Uri "http://127.0.0.1:8000/observation/continuation-plan"
+Invoke-RestMethod -Uri "http://127.0.0.1:8000/operator/observation-next-step"
+```
+
+Expected conservative output without repeated `STRONG_BUY` and risk-approved observations is `CONTINUE_OBSERVATION_ONLY`. Phase 39 does not change thresholds and does not enable paper or live trading.
 
 ## Phase 38 Controlled Paper Preflight Review And Decision
 
@@ -1041,7 +1068,7 @@ The default configuration is intentionally conservative:
 - `ENABLE_LIVE_TRADING=false`
 - `REQUIRE_LIVE_CONFIRMATION=true`
 - `LiveBroker` refuses orders unless every live safety condition passes
-- `ExecutionGuard` always reports live execution unavailable in Phase 38
+- `ExecutionGuard` always reports live execution unavailable in Phase 39
 - `SafetyAudit` must pass before future execution work
 - Exchange API secrets are never returned by API routes
 - No withdrawal functionality exists in this repository
@@ -1379,4 +1406,4 @@ Invoke-RestMethod -Uri "http://127.0.0.1:8000/risk/readiness"
 
 ## Live Trading Warning
 
-Live trading is locked down and not implemented in Phase 38. Kraken private access is read-only account data only. MooMoo is read-only market data only. Stock/Options Hunter, Options Scanner, alerts, unified reports, operator tooling, validation tooling, journal hygiene, risk hygiene, paper-trade readiness, paper-trade approval, controlled paper observation, controlled paper review, controlled paper preflight, controlled paper decision review, observation readiness, paper observation, observation persistence, observation windows, early recovery watchlist, decision gates, and calibration are read-only or paper-only scanner/research/reporting/status/checking modes. Real order placement, live sell execution, live cancel execution, withdrawals, transfers, funding, staking, margin trading, options execution, external alert delivery, and Coinbase integration are not implemented in this phase. Reporting, alerts, operator, validation, journal hygiene, risk hygiene, paper-trade readiness, paper-trade approval, controlled paper observation, controlled paper review, controlled paper preflight, controlled paper decision, observation, observation history, observation window, early recovery, decision gate, calibration, system, diagnostics, MooMoo, Stock/Options Hunter, and Options Scanner endpoints do not perform real exchange execution. Dry-run execution is only a preview, and paper/backtest/smoke-test/scanner/reporting/validation/observation/calibration/decision/watchlist/readiness/approval/controlled-paper/review/preflight results do not guarantee live performance.
+Live trading is locked down and not implemented in Phase 39. Kraken private access is read-only account data only. MooMoo is read-only market data only. Stock/Options Hunter, Options Scanner, alerts, unified reports, operator tooling, validation tooling, journal hygiene, risk hygiene, paper-trade readiness, paper-trade approval, controlled paper observation, controlled paper review, controlled paper preflight, controlled paper decision review, signal quality review, observation continuation, observation readiness, paper observation, observation persistence, observation windows, early recovery watchlist, decision gates, and calibration are read-only or paper-only scanner/research/reporting/status/checking modes. Real order placement, live sell execution, live cancel execution, withdrawals, transfers, funding, staking, margin trading, options execution, external alert delivery, and Coinbase integration are not implemented in this phase. Reporting, alerts, operator, validation, journal hygiene, risk hygiene, paper-trade readiness, paper-trade approval, controlled paper observation, controlled paper review, controlled paper preflight, controlled paper decision, signal quality, observation continuation, observation history, observation window, early recovery, decision gate, calibration, system, diagnostics, MooMoo, Stock/Options Hunter, and Options Scanner endpoints do not perform real exchange execution. Dry-run execution is only a preview, and paper/backtest/smoke-test/scanner/reporting/validation/observation/calibration/decision/watchlist/readiness/approval/controlled-paper/review/preflight/signal-quality results do not guarantee live performance.

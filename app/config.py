@@ -296,6 +296,20 @@ class Settings(BaseSettings):
     controlled_paper_decision_min_risk_approved_count: int = Field(default=1, ge=0, alias="CONTROLLED_PAPER_DECISION_MIN_RISK_APPROVED_COUNT")
     controlled_paper_decision_allow_config_review: bool = Field(default=False, alias="CONTROLLED_PAPER_DECISION_ALLOW_CONFIG_REVIEW")
     controlled_paper_decision_allow_activation: bool = Field(default=False, alias="CONTROLLED_PAPER_DECISION_ALLOW_ACTIVATION")
+    signal_quality_review_enabled: bool = Field(default=True, alias="SIGNAL_QUALITY_REVIEW_ENABLED")
+    signal_quality_review_history_limit: int = Field(default=500, ge=1, alias="SIGNAL_QUALITY_REVIEW_HISTORY_LIMIT")
+    signal_quality_review_min_observations: int = Field(default=20, ge=1, alias="SIGNAL_QUALITY_REVIEW_MIN_OBSERVATIONS")
+    signal_quality_review_min_completed_runs: int = Field(default=5, ge=1, alias="SIGNAL_QUALITY_REVIEW_MIN_COMPLETED_RUNS")
+    signal_quality_review_near_buy_watch_score: int = Field(default=65, ge=0, le=100, alias="SIGNAL_QUALITY_REVIEW_NEAR_BUY_WATCH_SCORE")
+    signal_quality_review_near_strong_buy_score: int = Field(default=75, ge=0, le=100, alias="SIGNAL_QUALITY_REVIEW_NEAR_STRONG_BUY_SCORE")
+    signal_quality_review_dominant_blocker_threshold: float = Field(default=0.50, ge=0, le=1, alias="SIGNAL_QUALITY_REVIEW_DOMINANT_BLOCKER_THRESHOLD")
+    signal_quality_review_require_persisted_history: bool = Field(default=True, alias="SIGNAL_QUALITY_REVIEW_REQUIRE_PERSISTED_HISTORY")
+    observation_continuation_enabled: bool = Field(default=True, alias="OBSERVATION_CONTINUATION_ENABLED")
+    observation_continuation_target_additional_runs: int = Field(default=5, ge=1, alias="OBSERVATION_CONTINUATION_TARGET_ADDITIONAL_RUNS")
+    observation_continuation_target_additional_observations: int = Field(default=20, ge=1, alias="OBSERVATION_CONTINUATION_TARGET_ADDITIONAL_OBSERVATIONS")
+    observation_continuation_allow_threshold_changes: bool = Field(default=False, alias="OBSERVATION_CONTINUATION_ALLOW_THRESHOLD_CHANGES")
+    observation_continuation_allow_paper_trades: bool = Field(default=False, alias="OBSERVATION_CONTINUATION_ALLOW_PAPER_TRADES")
+    observation_continuation_allow_live_review: bool = Field(default=False, alias="OBSERVATION_CONTINUATION_ALLOW_LIVE_REVIEW")
     risk_hygiene_enabled: bool = Field(default=True, alias="RISK_HYGIENE_ENABLED")
     risk_hygiene_preview_only: bool = Field(default=True, alias="RISK_HYGIENE_PREVIEW_ONLY")
     risk_hygiene_classify_legacy_records: bool = Field(default=True, alias="RISK_HYGIENE_CLASSIFY_LEGACY_RECORDS")
@@ -391,6 +405,8 @@ class Settings(BaseSettings):
             raise ValueError("CONTROLLED_PAPER_PREFLIGHT_ALLOW_CONFIG_MUTATION must remain false in this phase")
         if self.controlled_paper_decision_allow_activation:
             raise ValueError("CONTROLLED_PAPER_DECISION_ALLOW_ACTIVATION must remain false in this phase")
+        if self.observation_continuation_allow_threshold_changes or self.observation_continuation_allow_paper_trades or self.observation_continuation_allow_live_review:
+            raise ValueError("Observation continuation must not change thresholds or allow paper/live trading")
         if not self.risk_hygiene_preview_only or self.risk_hygiene_allow_destructive_cleanup:
             raise ValueError("Risk hygiene must remain preview-only with destructive cleanup disabled")
         return self

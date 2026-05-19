@@ -15,8 +15,10 @@ from app.observation.controlled_paper_preflight_review import ControlledPaperPre
 from app.observation.controlled_paper_review import ControlledPaperReviewService
 from app.observation.early_recovery_watchlist import EarlyRecoveryWatchlistService
 from app.observation.fresh_observation_validator import FreshObservationValidator
+from app.observation.observation_continuation import ObservationContinuationService
 from app.observation.paper_trade_approval_gate import PaperTradeApprovalGate
 from app.observation.paper_trade_readiness import PaperTradeReadinessService
+from app.observation.signal_quality_review import SignalQualityReviewService
 from app.reporting.candidate_summary import candidate_from_crypto_signal, candidate_from_early_recovery, candidate_from_ranked_option, candidate_from_stock_result
 from app.risk.risk_record_hygiene import RiskRecordHygiene
 from app.reporting.dashboard_service import DashboardService
@@ -93,6 +95,8 @@ class UnifiedReportService:
             "controlled_paper_audit": self._safe(lambda: ControlledPaperAuditService(settings=self.settings).audit(), {"passed": True, "blockers": []}),
             "controlled_paper_preflight": self._safe(lambda: ControlledPaperPreflightService(settings=self.settings).evaluate(), {"preflight_status": "NOT_READY", "activation_eligible": False}),
             "controlled_paper_decision": self._safe(lambda: ControlledPaperPreflightReviewService(settings=self.settings).decide(), {"decision": "CONTINUE_OBSERVATION_ONLY", "allow_paper_activation": False, "allow_live_review": False}),
+            "signal_quality_review": self._safe(lambda: SignalQualityReviewService(settings=self.settings).review(), {"observations_analyzed": 0, "strong_buy_count": 0, "risk_approved_count": 0}),
+            "observation_continuation_plan": self._safe(lambda: ObservationContinuationService(settings=self.settings).plan(), {"decision": "CONTINUE_OBSERVATION_ONLY", "paper_trades_allowed": False, "live_review_allowed": False}),
             "paper_trade_readiness": self._safe(lambda: PaperTradeReadinessService(settings=self.settings).check(), {"ready": False, "decision": "NOT_READY"}),
             "safety": {
                 "passed": bool(safety.get("passed", False)),
@@ -175,6 +179,14 @@ class UnifiedReportService:
             warnings.append("Controlled paper decision remains observation-only; Phase 38 does not enable paper or live trading.")
         if decision.get("decision") in {"BLOCKED", "FIX_GUARDRAILS"}:
             warnings.append("Controlled paper decision has guardrail blockers.")
+        quality = health.get("signal_quality_review", {})
+        if quality.get("strong_buy_count", 0) == 0:
+            warnings.append("Signal quality review found no STRONG_BUY observations.")
+        if quality.get("risk_approved_count", 0) == 0:
+            warnings.append("Signal quality review found no risk-approved observations.")
+        continuation = health.get("observation_continuation_plan", {})
+        if continuation.get("decision") in {"CONTINUE_OBSERVATION_ONLY", "COLLECT_MORE_OBSERVATIONS"}:
+            warnings.append("Observation continuation remains read-only; Phase 39 does not change thresholds or enable paper/live trading.")
         return warnings
 
     def _safe(self, fn, default):
