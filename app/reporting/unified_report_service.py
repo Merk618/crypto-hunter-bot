@@ -4,6 +4,9 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
+from app.audit.final_safety_review import FinalSafetyReview
+from app.audit.standalone_readiness_audit import StandaloneReadinessAudit
+from app.audit.v1_completion_checklist import V1CompletionChecklistService
 from app.config import Settings, get_settings
 from app.core.safety_audit import SafetyAudit
 from app.journal.journal_filters import dedupe_candidates, filter_production_records
@@ -101,6 +104,9 @@ class UnifiedReportService:
             "observation_continuation_plan": self._safe(lambda: ObservationContinuationService(settings=self.settings).plan(), {"decision": "CONTINUE_OBSERVATION_ONLY", "paper_trades_allowed": False, "live_review_allowed": False}),
             "strategy_review_checkpoint": self._safe(lambda: StrategyReviewCheckpointService(settings=self.settings).checkpoint(), {"decision": "CONTINUE_OBSERVATION_ONLY", "paper_trades_allowed": False, "live_review_allowed": False}),
             "extended_observation_plan": self._safe(lambda: ExtendedObservationPlanService(settings=self.settings).plan(), {"observe_only": True, "paper_trades_allowed": False, "live_review_allowed": False}),
+            "standalone_readiness": self._safe(lambda: StandaloneReadinessAudit(settings=self.settings).audit(), {"readiness_status": "NOT_READY", "ready_for_v1_freeze": False}),
+            "final_safety_review": self._safe(lambda: FinalSafetyReview(settings=self.settings).review(), {"passed": False, "blockers": ["final safety review unavailable"]}),
+            "v1_completion_checklist": self._safe(lambda: V1CompletionChecklistService(settings=self.settings).build(), {"complete": False, "missing_items": []}),
             "paper_trade_readiness": self._safe(lambda: PaperTradeReadinessService(settings=self.settings).check(), {"ready": False, "decision": "NOT_READY"}),
             "safety": {
                 "passed": bool(safety.get("passed", False)),
@@ -196,6 +202,11 @@ class UnifiedReportService:
             warnings.append("Strategy review recommends observation-only or an extended observation window.")
         if checkpoint.get("threshold_change_recommended") is False:
             warnings.append("Strategy review does not recommend automatic threshold changes.")
+        standalone = health.get("standalone_readiness", {})
+        if standalone.get("readiness_status") == "READY_FOR_FINAL_RUNBOOK":
+            warnings.append("Crypto Hunter v1 is ready for final runbook work; live trading remains disabled.")
+        if standalone.get("blockers"):
+            warnings.append("Standalone readiness has blockers.")
         return warnings
 
     def _safe(self, fn, default):

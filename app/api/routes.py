@@ -3,6 +3,9 @@
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
 
+from app.audit.final_safety_review import FinalSafetyReview
+from app.audit.standalone_readiness_audit import StandaloneReadinessAudit
+from app.audit.v1_completion_checklist import V1CompletionChecklistService
 from app.bot.paper_trading_bot import PaperTradingBotError
 from app.alerts.alert_service import AlertService
 from app.backtesting.backtest_engine import BacktestDataError, BacktestEngine
@@ -1354,6 +1357,43 @@ def operator_strategy_review() -> dict:
 def operator_extended_observation_next_step() -> dict:
     """Return operator extended observation next step."""
     return ExtendedObservationPlanService(settings=get_settings()).next_step()
+
+
+@router.get("/audit/standalone-readiness")
+def audit_standalone_readiness() -> dict:
+    """Return final standalone readiness audit."""
+    return StandaloneReadinessAudit(settings=get_settings()).audit()
+
+
+@router.get("/audit/final-safety-review")
+def audit_final_safety_review() -> dict:
+    """Return final safety review."""
+    return FinalSafetyReview(settings=get_settings()).review()
+
+
+@router.get("/audit/v1-completion-checklist")
+def audit_v1_completion_checklist() -> dict:
+    """Return v1 completion checklist."""
+    return V1CompletionChecklistService(settings=get_settings()).build()
+
+
+@router.get("/operator/final-readiness")
+def operator_final_readiness() -> dict:
+    """Return operator final readiness audit."""
+    return StandaloneReadinessAudit(settings=get_settings()).audit()
+
+
+@router.get("/operator/v1-finish-plan")
+def operator_v1_finish_plan() -> dict:
+    """Return operator v1 finish plan."""
+    audit = StandaloneReadinessAudit(settings=get_settings()).audit()
+    checklist = V1CompletionChecklistService(settings=get_settings()).build()
+    return {
+        "readiness": audit,
+        "checklist": checklist,
+        "next_step": (audit.get("recommended_next_actions") or ["Prepare final runbook."])[0],
+        "source": "crypto_hunter_operator_v1_finish_plan_v1",
+    }
 
 
 @router.get("/calibration/decision-gate")

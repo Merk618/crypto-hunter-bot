@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 from app.alerts.alert_service import AlertService
+from app.audit.standalone_readiness_audit import StandaloneReadinessAudit
+from app.audit.v1_completion_checklist import V1CompletionChecklistService
 from app.config import Settings, get_settings
 from app.connectors.moomoo.moomoo_readonly_client import MooMooReadOnlyClient
 from app.core.app_state import AppState
@@ -50,6 +52,8 @@ class OperatorService:
         observation_continuation: ObservationContinuationService | None = None,
         strategy_checkpoint: StrategyReviewCheckpointService | None = None,
         extended_observation_plan: ExtendedObservationPlanService | None = None,
+        standalone_readiness: StandaloneReadinessAudit | None = None,
+        v1_checklist: V1CompletionChecklistService | None = None,
     ) -> None:
         """Initialize operator dependencies."""
         self.settings = settings or get_settings()
@@ -72,6 +76,8 @@ class OperatorService:
         self.observation_continuation = observation_continuation or ObservationContinuationService(settings=self.settings, signal_quality=self.signal_quality, controlled_decision=self.controlled_decision)
         self.strategy_checkpoint = strategy_checkpoint or StrategyReviewCheckpointService(settings=self.settings, signal_quality=self.signal_quality, controlled_decision=self.controlled_decision)
         self.extended_observation_plan = extended_observation_plan or ExtendedObservationPlanService(settings=self.settings, checkpoint_service=self.strategy_checkpoint)
+        self.standalone_readiness = standalone_readiness or StandaloneReadinessAudit(settings=self.settings)
+        self.v1_checklist = v1_checklist or V1CompletionChecklistService(settings=self.settings)
 
     def get_operator_status(self) -> dict:
         """Return standalone operator status."""
@@ -140,6 +146,10 @@ class OperatorService:
         extended = self._safe(lambda: self.extended_observation_plan.plan(), {"recommended_commands": []})
         if extended.get("observe_only"):
             actions.append("Use the extended observation plan before any further paper-review discussion.")
+        readiness = self._safe(lambda: self.standalone_readiness.audit(), {"recommended_next_actions": []})
+        actions.extend(readiness.get("recommended_next_actions") or [])
+        checklist = self._safe(lambda: self.v1_checklist.build(), {"recommended_finish_steps": []})
+        actions.extend(checklist.get("recommended_finish_steps") or [])
         return list(dict.fromkeys(actions))
 
     def _fresh_warnings(self) -> list[str]:
@@ -178,6 +188,9 @@ class OperatorService:
         checkpoint = self._safe(lambda: self.strategy_checkpoint.checkpoint(), {})
         if checkpoint.get("decision") in {"CONTINUE_OBSERVATION_ONLY", "EXTEND_OBSERVATION_WINDOW"}:
             warnings.append("Strategy checkpoint recommends observation-only or extended observation.")
+        readiness = self._safe(lambda: self.standalone_readiness.audit(), {})
+        if readiness.get("readiness_status") == "READY_FOR_FINAL_RUNBOOK":
+            warnings.append("Standalone readiness is ready for final runbook work.")
         return warnings
 
     def _safe(self, fn, default):

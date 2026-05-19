@@ -324,6 +324,19 @@ class Settings(BaseSettings):
     extended_observation_target_observations: int = Field(default=40, ge=1, alias="EXTENDED_OBSERVATION_TARGET_OBSERVATIONS")
     extended_observation_review_after_runs: int = Field(default=5, ge=1, alias="EXTENDED_OBSERVATION_REVIEW_AFTER_RUNS")
     extended_observation_include_early_recovery: bool = Field(default=True, alias="EXTENDED_OBSERVATION_INCLUDE_EARLY_RECOVERY")
+    standalone_readiness_audit_enabled: bool = Field(default=True, alias="STANDALONE_READINESS_AUDIT_ENABLED")
+    v1_completion_checklist_enabled: bool = Field(default=True, alias="V1_COMPLETION_CHECKLIST_ENABLED")
+    final_safety_review_enabled: bool = Field(default=True, alias="FINAL_SAFETY_REVIEW_ENABLED")
+    standalone_require_safety_audit: bool = Field(default=True, alias="STANDALONE_REQUIRE_SAFETY_AUDIT")
+    standalone_require_live_locked: bool = Field(default=True, alias="STANDALONE_REQUIRE_LIVE_LOCKED")
+    standalone_require_addorder_absent: bool = Field(default=True, alias="STANDALONE_REQUIRE_ADDORDER_ABSENT")
+    standalone_require_no_real_execution_routes: bool = Field(default=True, alias="STANDALONE_REQUIRE_NO_REAL_EXECUTION_ROUTES")
+    standalone_require_observation_persistence: bool = Field(default=True, alias="STANDALONE_REQUIRE_OBSERVATION_PERSISTENCE")
+    standalone_require_operator_endpoints: bool = Field(default=True, alias="STANDALONE_REQUIRE_OPERATOR_ENDPOINTS")
+    standalone_require_reporting_endpoints: bool = Field(default=True, alias="STANDALONE_REQUIRE_REPORTING_ENDPOINTS")
+    standalone_require_docs: bool = Field(default=True, alias="STANDALONE_REQUIRE_DOCS")
+    standalone_allow_paper_trading: bool = Field(default=False, alias="STANDALONE_ALLOW_PAPER_TRADING")
+    standalone_allow_live_trading: bool = Field(default=False, alias="STANDALONE_ALLOW_LIVE_TRADING")
     risk_hygiene_enabled: bool = Field(default=True, alias="RISK_HYGIENE_ENABLED")
     risk_hygiene_preview_only: bool = Field(default=True, alias="RISK_HYGIENE_PREVIEW_ONLY")
     risk_hygiene_classify_legacy_records: bool = Field(default=True, alias="RISK_HYGIENE_CLASSIFY_LEGACY_RECORDS")
@@ -423,6 +436,8 @@ class Settings(BaseSettings):
             raise ValueError("Observation continuation must not change thresholds or allow paper/live trading")
         if self.strategy_review_allow_threshold_changes or self.strategy_review_allow_paper_trades or self.strategy_review_allow_live_review:
             raise ValueError("Strategy review must not change thresholds or allow paper/live trading")
+        if self.standalone_allow_paper_trading or self.standalone_allow_live_trading:
+            raise ValueError("Standalone readiness must not allow paper or live trading in this phase")
         if not self.risk_hygiene_preview_only or self.risk_hygiene_allow_destructive_cleanup:
             raise ValueError("Risk hygiene must remain preview-only with destructive cleanup disabled")
         return self
