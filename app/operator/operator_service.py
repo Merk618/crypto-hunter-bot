@@ -11,6 +11,7 @@ from app.core.app_state import AppState
 from app.core.safety_audit import SafetyAudit
 from app.execution.paper_broker import PaperBroker
 from app.operator.command_summary import CommandSummaryBuilder
+from app.operator.local_runbook import LocalOperatorRunbookService
 from app.operator.operator_models import OperatorStatus
 from app.operator.startup_checks import StartupChecks
 from app.observation.fresh_observation_validator import FreshObservationValidator
@@ -54,6 +55,7 @@ class OperatorService:
         extended_observation_plan: ExtendedObservationPlanService | None = None,
         standalone_readiness: StandaloneReadinessAudit | None = None,
         v1_checklist: V1CompletionChecklistService | None = None,
+        local_runbook: LocalOperatorRunbookService | None = None,
     ) -> None:
         """Initialize operator dependencies."""
         self.settings = settings or get_settings()
@@ -78,6 +80,7 @@ class OperatorService:
         self.extended_observation_plan = extended_observation_plan or ExtendedObservationPlanService(settings=self.settings, checkpoint_service=self.strategy_checkpoint)
         self.standalone_readiness = standalone_readiness or StandaloneReadinessAudit(settings=self.settings)
         self.v1_checklist = v1_checklist or V1CompletionChecklistService(settings=self.settings)
+        self.local_runbook = local_runbook or LocalOperatorRunbookService(settings=self.settings)
 
     def get_operator_status(self) -> dict:
         """Return standalone operator status."""
@@ -150,6 +153,9 @@ class OperatorService:
         actions.extend(readiness.get("recommended_next_actions") or [])
         checklist = self._safe(lambda: self.v1_checklist.build(), {"recommended_finish_steps": []})
         actions.extend(checklist.get("recommended_finish_steps") or [])
+        health = self._safe(lambda: self.local_runbook.one_command_health_check(), {})
+        if health.get("passed"):
+            actions.append("Run the one-command health check before v1 freeze handoff.")
         return list(dict.fromkeys(actions))
 
     def _fresh_warnings(self) -> list[str]:
@@ -191,6 +197,9 @@ class OperatorService:
         readiness = self._safe(lambda: self.standalone_readiness.audit(), {})
         if readiness.get("readiness_status") == "READY_FOR_FINAL_RUNBOOK":
             warnings.append("Standalone readiness is ready for final runbook work.")
+        health = self._safe(lambda: self.local_runbook.one_command_health_check(), {})
+        if health.get("passed"):
+            warnings.append("One-command health check is passing locally.")
         return warnings
 
     def _safe(self, fn, default):

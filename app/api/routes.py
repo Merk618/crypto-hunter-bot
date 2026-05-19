@@ -58,6 +58,7 @@ from app.observation.paper_trade_readiness import PaperTradeReadinessService
 from app.observation.signal_quality_review import SignalQualityReviewService
 from app.observation.strategy_review_checkpoint import StrategyReviewCheckpointService
 from app.operator.operator_service import OperatorService
+from app.operator.local_runbook import LocalOperatorRunbookService
 from app.risk.risk_readiness import RiskReadiness
 from app.risk.risk_record_hygiene import RiskRecordHygiene
 from app.storage.database import init_db
@@ -1394,6 +1395,30 @@ def operator_v1_finish_plan() -> dict:
         "next_step": (audit.get("recommended_next_actions") or ["Prepare final runbook."])[0],
         "source": "crypto_hunter_operator_v1_finish_plan_v1",
     }
+
+
+@router.get("/operator/local-runbook")
+def operator_local_runbook() -> dict:
+    """Return local operator runbook."""
+    return LocalOperatorRunbookService(settings=get_settings()).runbook()
+
+
+@router.get("/operator/one-command-health-check")
+def operator_one_command_health_check() -> dict:
+    """Return one-command local health check."""
+    return LocalOperatorRunbookService(settings=get_settings()).one_command_health_check()
+
+
+@router.get("/operator/local-smoke-test")
+def operator_local_smoke_test() -> dict:
+    """Return lightweight local smoke test."""
+    return LocalOperatorRunbookService(settings=get_settings()).local_smoke_test()
+
+
+@router.get("/operator/v1-startup-guide")
+def operator_v1_startup_guide() -> dict:
+    """Return v1 startup guide."""
+    return LocalOperatorRunbookService(settings=get_settings()).startup_guide()
 
 
 @router.get("/calibration/decision-gate")

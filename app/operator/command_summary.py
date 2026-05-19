@@ -29,6 +29,8 @@ class CommandSummaryBuilder:
             {"label": "Standalone readiness", "command": r'Invoke-RestMethod -Uri "http://127.0.0.1:8000/audit/standalone-readiness"'},
             {"label": "Final safety review", "command": r'Invoke-RestMethod -Uri "http://127.0.0.1:8000/audit/final-safety-review"'},
             {"label": "V1 finish plan", "command": r'Invoke-RestMethod -Uri "http://127.0.0.1:8000/operator/v1-finish-plan"'},
+            {"label": "Local runbook", "command": r'Invoke-RestMethod -Uri "http://127.0.0.1:8000/operator/local-runbook"'},
+            {"label": "One-command health check", "command": r".\.venv\Scripts\python.exe scripts\health_check_phase42.py"},
             {"label": "MooMoo status", "command": r'Invoke-RestMethod -Uri "http://127.0.0.1:8000/moomoo/status"'},
             {"label": "Stock candidates", "command": r'Invoke-RestMethod -Uri "http://127.0.0.1:8000/stock-hunter/top-candidates"'},
             {"label": "Options scanner top", "command": r'Invoke-RestMethod -Uri "http://127.0.0.1:8000/options-scanner/top"'},

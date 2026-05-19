@@ -24,6 +24,7 @@ from app.observation.paper_trade_approval_gate import PaperTradeApprovalGate
 from app.observation.paper_trade_readiness import PaperTradeReadinessService
 from app.observation.signal_quality_review import SignalQualityReviewService
 from app.observation.strategy_review_checkpoint import StrategyReviewCheckpointService
+from app.operator.local_runbook import LocalOperatorRunbookService
 from app.reporting.candidate_summary import candidate_from_crypto_signal, candidate_from_early_recovery, candidate_from_ranked_option, candidate_from_stock_result
 from app.risk.risk_record_hygiene import RiskRecordHygiene
 from app.reporting.dashboard_service import DashboardService
@@ -107,6 +108,7 @@ class UnifiedReportService:
             "standalone_readiness": self._safe(lambda: StandaloneReadinessAudit(settings=self.settings).audit(), {"readiness_status": "NOT_READY", "ready_for_v1_freeze": False}),
             "final_safety_review": self._safe(lambda: FinalSafetyReview(settings=self.settings).review(), {"passed": False, "blockers": ["final safety review unavailable"]}),
             "v1_completion_checklist": self._safe(lambda: V1CompletionChecklistService(settings=self.settings).build(), {"complete": False, "missing_items": []}),
+            "one_command_health_check": self._safe(lambda: LocalOperatorRunbookService(settings=self.settings).one_command_health_check(), {"passed": False, "status": "UNAVAILABLE"}),
             "paper_trade_readiness": self._safe(lambda: PaperTradeReadinessService(settings=self.settings).check(), {"ready": False, "decision": "NOT_READY"}),
             "safety": {
                 "passed": bool(safety.get("passed", False)),
@@ -207,6 +209,11 @@ class UnifiedReportService:
             warnings.append("Crypto Hunter v1 is ready for final runbook work; live trading remains disabled.")
         if standalone.get("blockers"):
             warnings.append("Standalone readiness has blockers.")
+        health_check = health.get("one_command_health_check", {})
+        if health_check.get("passed"):
+            warnings.append("One-command health check is passing; Crypto Hunter v1 is locally ready for final runbook workflow.")
+        elif health_check:
+            warnings.append("One-command health check has blockers.")
         return warnings
 
     def _safe(self, fn, default):
