@@ -5,6 +5,7 @@ from __future__ import annotations
 from app.alerts.alert_service import AlertService
 from app.audit.standalone_readiness_audit import StandaloneReadinessAudit
 from app.audit.v1_completion_checklist import V1CompletionChecklistService
+from app.audit.v1_freeze_report import V1FreezeReportService
 from app.config import Settings, get_settings
 from app.connectors.moomoo.moomoo_readonly_client import MooMooReadOnlyClient
 from app.core.app_state import AppState
@@ -56,6 +57,7 @@ class OperatorService:
         standalone_readiness: StandaloneReadinessAudit | None = None,
         v1_checklist: V1CompletionChecklistService | None = None,
         local_runbook: LocalOperatorRunbookService | None = None,
+        v1_freeze: V1FreezeReportService | None = None,
     ) -> None:
         """Initialize operator dependencies."""
         self.settings = settings or get_settings()
@@ -81,6 +83,7 @@ class OperatorService:
         self.standalone_readiness = standalone_readiness or StandaloneReadinessAudit(settings=self.settings)
         self.v1_checklist = v1_checklist or V1CompletionChecklistService(settings=self.settings)
         self.local_runbook = local_runbook or LocalOperatorRunbookService(settings=self.settings)
+        self.v1_freeze = v1_freeze or V1FreezeReportService(settings=self.settings)
 
     def get_operator_status(self) -> dict:
         """Return standalone operator status."""
@@ -123,6 +126,18 @@ class OperatorService:
             "source": "crypto_hunter_operator_daily_briefing_v1",
         }
 
+    def get_v1_handoff_package(self) -> dict:
+        """Return final v1 handoff package."""
+        return self.v1_freeze.handoff_package()
+
+    def get_future_roadmap(self) -> dict:
+        """Return post-v1 roadmap."""
+        return self.v1_freeze.future_roadmap()
+
+    def get_next_project_plan(self) -> dict:
+        """Return the next standalone project plan."""
+        return self.v1_freeze.next_project_plan()
+
     def get_next_recommended_actions(self) -> list[str]:
         """Return next recommended safe actions."""
         startup = self._safe(lambda: self.startup_checks.run().to_dict(), {"recommended_actions": ["Run startup checks"]})
@@ -156,6 +171,9 @@ class OperatorService:
         health = self._safe(lambda: self.local_runbook.one_command_health_check(), {})
         if health.get("passed"):
             actions.append("Run the one-command health check before v1 freeze handoff.")
+        freeze = self._safe(lambda: self.v1_freeze.freeze_report(), {})
+        if freeze.get("v1_status") == "READY_TO_FREEZE":
+            actions.append("Tag the standalone v1 freeze as v1.0.0-standalone-observation when the operator is ready.")
         return list(dict.fromkeys(actions))
 
     def _fresh_warnings(self) -> list[str]:
@@ -200,6 +218,9 @@ class OperatorService:
         health = self._safe(lambda: self.local_runbook.one_command_health_check(), {})
         if health.get("passed"):
             warnings.append("One-command health check is passing locally.")
+        freeze = self._safe(lambda: self.v1_freeze.freeze_report(), {})
+        if freeze.get("ready_to_archive_as_v1"):
+            warnings.append("Crypto Hunter standalone v1 freeze package is ready.")
         return warnings
 
     def _safe(self, fn, default):

@@ -7,6 +7,7 @@ from datetime import datetime, timezone
 from app.audit.final_safety_review import FinalSafetyReview
 from app.audit.standalone_readiness_audit import StandaloneReadinessAudit
 from app.audit.v1_completion_checklist import V1CompletionChecklistService
+from app.audit.v1_freeze_report import V1FreezeReportService
 from app.config import Settings, get_settings
 from app.core.safety_audit import SafetyAudit
 from app.journal.journal_filters import dedupe_candidates, filter_production_records
@@ -109,6 +110,7 @@ class UnifiedReportService:
             "final_safety_review": self._safe(lambda: FinalSafetyReview(settings=self.settings).review(), {"passed": False, "blockers": ["final safety review unavailable"]}),
             "v1_completion_checklist": self._safe(lambda: V1CompletionChecklistService(settings=self.settings).build(), {"complete": False, "missing_items": []}),
             "one_command_health_check": self._safe(lambda: LocalOperatorRunbookService(settings=self.settings).one_command_health_check(), {"passed": False, "status": "UNAVAILABLE"}),
+            "v1_freeze_report": self._safe(lambda: V1FreezeReportService(settings=self.settings).freeze_report(), {"v1_status": "NOT_READY", "ready_to_archive_as_v1": False}),
             "paper_trade_readiness": self._safe(lambda: PaperTradeReadinessService(settings=self.settings).check(), {"ready": False, "decision": "NOT_READY"}),
             "safety": {
                 "passed": bool(safety.get("passed", False)),
@@ -214,6 +216,11 @@ class UnifiedReportService:
             warnings.append("One-command health check is passing; Crypto Hunter v1 is locally ready for final runbook workflow.")
         elif health_check:
             warnings.append("One-command health check has blockers.")
+        freeze = health.get("v1_freeze_report", {})
+        if freeze.get("ready_to_archive_as_v1"):
+            warnings.append("Crypto Hunter v1 freeze report is ready; recommended tag is v1.0.0-standalone-observation.")
+        elif freeze:
+            warnings.append("Crypto Hunter v1 freeze report has blockers.")
         return warnings
 
     def _safe(self, fn, default):

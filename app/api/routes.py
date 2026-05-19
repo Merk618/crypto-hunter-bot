@@ -6,6 +6,7 @@ from pydantic import BaseModel, Field
 from app.audit.final_safety_review import FinalSafetyReview
 from app.audit.standalone_readiness_audit import StandaloneReadinessAudit
 from app.audit.v1_completion_checklist import V1CompletionChecklistService
+from app.audit.v1_freeze_report import V1FreezeReportService
 from app.bot.paper_trading_bot import PaperTradingBotError
 from app.alerts.alert_service import AlertService
 from app.backtesting.backtest_engine import BacktestDataError, BacktestEngine
@@ -1419,6 +1420,30 @@ def operator_local_smoke_test() -> dict:
 def operator_v1_startup_guide() -> dict:
     """Return v1 startup guide."""
     return LocalOperatorRunbookService(settings=get_settings()).startup_guide()
+
+
+@router.get("/audit/v1-freeze-report")
+def audit_v1_freeze_report() -> dict:
+    """Return Crypto Hunter standalone v1 freeze report."""
+    return V1FreezeReportService(settings=get_settings()).freeze_report()
+
+
+@router.get("/operator/v1-handoff-package")
+def operator_v1_handoff_package() -> dict:
+    """Return Crypto Hunter v1 handoff package."""
+    return OperatorService(settings=get_settings()).get_v1_handoff_package()
+
+
+@router.get("/operator/future-roadmap")
+def operator_future_roadmap() -> dict:
+    """Return post-v1 future roadmap."""
+    return OperatorService(settings=get_settings()).get_future_roadmap()
+
+
+@router.get("/operator/next-project-plan")
+def operator_next_project_plan() -> dict:
+    """Return next standalone project plan."""
+    return OperatorService(settings=get_settings()).get_next_project_plan()
 
 
 @router.get("/calibration/decision-gate")

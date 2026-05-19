@@ -4,7 +4,7 @@ Crypto Hunter is a backend trading engine for a sophisticated crypto trading bot
 
 ## Current Phase
 
-Phase 42 local operator runbook and one-command health check:
+Phase 43 v1 freeze, handoff package, and future roadmap:
 
 - Clean Python backend project
 - FastAPI health and status endpoints
@@ -54,6 +54,8 @@ Phase 42 local operator runbook and one-command health check:
 - SQLite persistence and hydration for observation runs/results so calibration, decision gates, early recovery, and reports survive backend restarts
 - Observation-only Early Recovery Watchlist, report polish, and unified daily briefing section for EMA 200-blocked recovery candidates
 - Paper-trade observation readiness gate, risk record hygiene checks, and operator approval structure for a future paper-only phase
+- Local operator runbook, one-command health check, smoke-test scripts, and startup guide for standalone v1 operation
+- Final v1 freeze report, operator handoff package, future roadmap, and next-project Stock Trader Bot plan
 
 Live trading and real exchange order execution are not implemented yet. Crypto Hunter remains standalone-first; YucaTanaTrades frontend integration comes later after local reliability is proven.
 
@@ -981,6 +983,42 @@ Invoke-RestMethod -Uri "http://127.0.0.1:8000/operator/controlled-paper-review"
 
 Passing guardrails, decision checks, signal-quality review, the strategy checkpoint, final standalone readiness audit, and one-command health check means the backend is safe for final v1 handoff work. It does not enable paper trades or live trading.
 
+## Phase 43 V1 Freeze And Handoff
+
+Phase 43 creates the final standalone v1 freeze report, handoff package, future roadmap, and next-project plan before work moves to the separate MooMoo Stock Trader Bot project.
+
+Docs:
+
+- [Crypto Hunter V1 Freeze](docs/CRYPTO_HUNTER_V1_FREEZE.md)
+- [Crypto Hunter Handoff Package](docs/CRYPTO_HUNTER_HANDOFF_PACKAGE.md)
+- [Crypto Hunter Future Roadmap](docs/CRYPTO_HUNTER_FUTURE_ROADMAP.md)
+- [Next Project: Stock Trader Bot](docs/NEXT_PROJECT_STOCK_TRADER_BOT.md)
+- [SOL Meme Hunter Future Module](docs/SOL_MEME_HUNTER_FUTURE_MODULE.md)
+
+Endpoints:
+
+- `GET /audit/v1-freeze-report`
+- `GET /operator/v1-handoff-package`
+- `GET /operator/future-roadmap`
+- `GET /operator/next-project-plan`
+
+Operator commands:
+
+```powershell
+Invoke-RestMethod -Uri "http://127.0.0.1:8000/audit/v1-freeze-report" | ConvertTo-Json -Depth 10
+Invoke-RestMethod -Uri "http://127.0.0.1:8000/operator/v1-handoff-package" | ConvertTo-Json -Depth 10
+Invoke-RestMethod -Uri "http://127.0.0.1:8000/operator/future-roadmap" | ConvertTo-Json -Depth 10
+```
+
+Recommended tag after tests and health checks pass:
+
+```powershell
+git tag v1.0.0-standalone-observation
+git push origin v1.0.0-standalone-observation
+```
+
+Phase 43 does not enable paper trading, controlled paper observation, live trading, threshold mutation, or real exchange execution.
+
 ## Phase 42 Local Operator Runbook And Health Check
 
 Phase 42 adds local operator workflow docs, safe scripts, and API endpoints for starting, verifying, operating, and handing off Crypto Hunter standalone v1.
@@ -1154,7 +1192,7 @@ The default configuration is intentionally conservative:
 - `ENABLE_LIVE_TRADING=false`
 - `REQUIRE_LIVE_CONFIRMATION=true`
 - `LiveBroker` refuses orders unless every live safety condition passes
-- `ExecutionGuard` always reports live execution unavailable in Phase 42
+- `ExecutionGuard` always reports live execution unavailable in Phase 43
 - `SafetyAudit` must pass before future execution work
 - Exchange API secrets are never returned by API routes
 - No withdrawal functionality exists in this repository
@@ -1492,4 +1530,4 @@ Invoke-RestMethod -Uri "http://127.0.0.1:8000/risk/readiness"
 
 ## Live Trading Warning
 
-Live trading is locked down and not implemented in Phase 42. Kraken private access is read-only account data only. MooMoo is read-only market data only. Stock/Options Hunter, Options Scanner, alerts, unified reports, operator tooling, validation tooling, journal hygiene, risk hygiene, paper-trade readiness, paper-trade approval, controlled paper observation, controlled paper review, controlled paper preflight, controlled paper decision review, signal quality review, strategy review checkpoint, standalone readiness audit, final safety review, local operator runbook, one-command health check, extended observation plan, observation continuation, observation readiness, paper observation, observation persistence, observation windows, early recovery watchlist, decision gates, and calibration are read-only or paper-only scanner/research/reporting/status/checking modes. Real order placement, live sell execution, live cancel execution, withdrawals, transfers, funding, staking, margin trading, options execution, external alert delivery, and Coinbase integration are not implemented in this phase. Reporting, alerts, operator, validation, journal hygiene, risk hygiene, paper-trade readiness, paper-trade approval, controlled paper observation, controlled paper review, controlled paper preflight, controlled paper decision, signal quality, strategy review, standalone readiness audit, final safety review, local runbook, health check, extended observation plan, observation continuation, observation history, observation window, early recovery, decision gate, calibration, system, diagnostics, MooMoo, Stock/Options Hunter, and Options Scanner endpoints do not perform real exchange execution. Dry-run execution is only a preview, and paper/backtest/smoke-test/scanner/reporting/validation/observation/calibration/decision/watchlist/readiness/approval/controlled-paper/review/preflight/signal-quality/strategy-review/audit/health-check results do not guarantee live performance.
+Live trading is locked down and not implemented in Phase 43. Kraken private access is read-only account data only. MooMoo is read-only market data only. Stock/Options Hunter, Options Scanner, alerts, unified reports, operator tooling, validation tooling, journal hygiene, risk hygiene, paper-trade readiness, paper-trade approval, controlled paper observation, controlled paper review, controlled paper preflight, controlled paper decision review, signal quality review, strategy review checkpoint, standalone readiness audit, final safety review, local operator runbook, one-command health check, v1 freeze reporting, handoff packaging, extended observation plan, observation continuation, observation readiness, paper observation, observation persistence, observation windows, early recovery watchlist, decision gates, and calibration are read-only or paper-only scanner/research/reporting/status/checking modes. Real order placement, live sell execution, live cancel execution, withdrawals, transfers, funding, staking, margin trading, options execution, external alert delivery, and Coinbase integration are not implemented in this phase. Reporting, alerts, operator, validation, journal hygiene, risk hygiene, paper-trade readiness, paper-trade approval, controlled paper observation, controlled paper review, controlled paper preflight, controlled paper decision, signal quality, strategy review, standalone readiness audit, final safety review, local runbook, health check, v1 freeze, handoff, extended observation plan, observation continuation, observation history, observation window, early recovery, decision gate, calibration, system, diagnostics, MooMoo, Stock/Options Hunter, and Options Scanner endpoints do not perform real exchange execution. Dry-run execution is only a preview, and paper/backtest/smoke-test/scanner/reporting/validation/observation/calibration/decision/watchlist/readiness/approval/controlled-paper/review/preflight/signal-quality/strategy-review/audit/health-check/freeze results do not guarantee live performance.
